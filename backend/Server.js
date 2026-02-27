@@ -8,8 +8,9 @@ const cookieParser = require("cookie-parser");
 // ⭐ Load environment variables FIRST - BEFORE any other requires
 dotenv.config();
 
-// 🔍 Debug: Check if Razorpay keys are loaded
-console.log("\n=== Environment Check ===");
+// 🔍 Debug: Check if ALL keys are loaded
+console.log("\n========== Environment Check ==========");
+console.log("NODE_ENV:", process.env.NODE_ENV || "development");
 console.log(
   "RAZORPAY_KEY_ID:",
   process.env.RAZORPAY_KEY_ID ? "✅ Loaded" : "❌ Missing",
@@ -18,9 +19,37 @@ console.log(
   "RAZORPAY_KEY_SECRET:",
   process.env.RAZORPAY_KEY_SECRET ? "✅ Loaded" : "❌ Missing",
 );
-console.log("=========================\n");
+console.log(
+  "EMAIL_HOST:",
+  process.env.EMAIL_HOST || "❌ Missing (default: smtp.gmail.com)",
+);
+console.log(
+  "EMAIL_PORT:",
+  process.env.EMAIL_PORT || "❌ Missing (default: 587)",
+);
+console.log(
+  "EMAIL_USER:",
+  process.env.EMAIL_USER ? `✅ ${process.env.EMAIL_USER}` : "❌ Missing",
+);
+console.log(
+  "EMAIL_PASS:",
+  process.env.EMAIL_PASS ? "✅ ***SET***" : "❌ Missing",
+);
+console.log(
+  "FRONTEND_URL:",
+  process.env.FRONTEND_URL || "❌ Missing (default: http://localhost:5173)",
+);
+console.log(
+  "JWT_SECRET:",
+  process.env.JWT_SECRET ? "✅ ***SET***" : "❌ Missing",
+);
+console.log(
+  "MONGODB_URI:",
+  process.env.MONGODB_URI ? "✅ ***CONNECTED***" : "❌ Missing",
+);
+console.log("========================================\n");
 
-// ⭐ NOW require payment routes (after dotenv is loaded)
+// ⭐ NOW require routes (after dotenv is loaded)
 const paymentRoutes = require("./routes/payment");
 
 const app = express();
@@ -48,6 +77,7 @@ app.use(
     credentials: true,
   }),
 );
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -69,7 +99,7 @@ app.use("/api/orders", require("./routes/orders"));
 app.use("/api/coupons", require("./routes/coupons"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/admin", require("./routes/admin"));
-app.use("/api/payment", paymentRoutes); // ← Now this will work
+app.use("/api/payment", paymentRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {
@@ -77,6 +107,11 @@ app.get("/api/health", (req, res) => {
     success: true,
     message: "ShopEasy API is running",
     timestamp: new Date().toISOString(),
+    config: {
+      email: !!process.env.EMAIL_USER,
+      razorpay: !!process.env.RAZORPAY_KEY_ID,
+      nodeEnv: process.env.NODE_ENV || "development",
+    },
   });
 });
 
@@ -136,16 +171,22 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 ShopEasy Server running on port ${PORT}`);
+  console.log("\n========== ShopEasy Server ==========");
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(
-    `📧 Email service: ${process.env.EMAIL_USER ? "Configured" : "Not configured"}`,
+    `🌐 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:5173"}`,
   );
   console.log(
-    `🌍 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:5173"}`,
+    `📧 Email service: ${process.env.EMAIL_USER ? `✅ ${process.env.EMAIL_USER}` : "❌ Not configured"}`,
   );
   console.log(
-    `💳 Razorpay: ${process.env.RAZORPAY_KEY_ID ? "Configured" : "Not configured"}`,
+    `💳 Razorpay: ${process.env.RAZORPAY_KEY_ID ? "✅ Configured" : "❌ Not configured"}`,
   );
+  console.log(
+    `🗄️  Database: ${process.env.MONGODB_URI ? "✅ Connected" : "❌ Not configured"}`,
+  );
+  console.log("=====================================\n");
 });
 
 // Handle unhandled promise rejections

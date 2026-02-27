@@ -340,19 +340,10 @@ router.post("/login", async (req, res) => {
 
     // Check if verified
     if (!user.isVerified) {
-      // Send new OTP
-      const otp = user.generateEmailVerificationOTP();
-      await user.save();
-
-      // ✅ SEND EMAIL IN BACKGROUND
-      sendEmail(email, "verificationOTP", user.name, otp).catch((err) =>
-        console.error("Email error:", err),
-      );
-
       return res.status(403).json({
         success: false,
-        message: "Please verify your email first. OTP sent.",
-        data: { email, requiresVerification: true },
+        message:
+          "Please verify your email first. Check your inbox for the verification link sent during registration.",
       });
     }
 

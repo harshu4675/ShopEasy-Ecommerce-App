@@ -1,7 +1,13 @@
 import axios from "axios";
 
-// API Base URL
-const API_URL = process.env.REACT_APP_API_URL;
+// API Base URL - Fix for Vite
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+// Debug log
+console.log("🔧 API Configuration:", {
+  baseURL: API_URL,
+  env: import.meta.env.MODE,
+});
 
 // Create axios instance
 export const api = axios.create({
@@ -74,9 +80,9 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Try to refresh token
+        // Try to refresh token - FIXED: Removed double /api
         const { data } = await axios.post(
-          `${API_URL}/api/auth/refresh-token`,
+          `${API_URL}/auth/refresh-token`, // ✅ FIXED
           {},
           { withCredentials: true },
         );
@@ -113,7 +119,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
 // ==================== API METHODS ====================
 
 // Auth API

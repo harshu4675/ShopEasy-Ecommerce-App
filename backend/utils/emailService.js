@@ -1,35 +1,49 @@
 const nodemailer = require("nodemailer");
 
-// ==================== TRANSPORTER (WITH CONNECTION POOLING) ====================
+// ==================== TRANSPORTER ====================
 
-// Create a single reusable transporter instance (connection pooling)
 let transporter = null;
 
 const getTransporter = () => {
   if (!transporter) {
+    // ✅ Check if credentials exist
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error("❌ EMAIL_USER or EMAIL_PASS is missing in .env file!");
+      console.error("📧 EMAIL_USER:", process.env.EMAIL_USER || "NOT SET");
+      console.error(
+        "📧 EMAIL_PASS:",
+        process.env.EMAIL_PASS ? "SET" : "NOT SET",
+      );
+      return null;
+    }
+
     transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || "smtp.gmail.com",
-      port: process.env.EMAIL_PORT || 587,
-      secure: false, // true for 465, false for other ports
-      pool: true, // ✅ Enable connection pooling
-      maxConnections: 5, // ✅ Max concurrent connections
-      maxMessages: 100, // ✅ Max messages per connection
-      rateDelta: 1000, // ✅ 1 second between messages
-      rateLimit: 5, // ✅ Max 5 emails per second
+      port: parseInt(process.env.EMAIL_PORT) || 587,
+      secure: false,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      // ✅ Connection timeout settings
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 5000, // 5 seconds
-      socketTimeout: 20000, // 20 seconds
+      connectionTimeout: 10000,
+      greetingTimeout: 5000,
+      socketTimeout: 20000,
+      // ✅ Add debug for development
+      debug: process.env.NODE_ENV === "development",
+      logger: process.env.NODE_ENV === "development",
     });
 
-    // ✅ Verify connection on startup (optional)
+    // Verify connection
     transporter.verify((error, success) => {
       if (error) {
-        console.error("❌ Email transporter error:", error);
+        console.error(
+          "❌ Email transporter verification failed:",
+          error.message,
+        );
+        console.error("📧 Check your EMAIL_USER and EMAIL_PASS in .env");
       } else {
         console.log("✅ Email server is ready to send messages");
       }
@@ -81,7 +95,7 @@ const emailTemplates = {
             </div>
           </div>
           <div class="footer">
-            <p>© 2024 ShopEasy. All rights reserved.</p>
+            <p>© 2026 ShopEasy. All rights reserved.</p>
             <p>This is an automated email, please do not reply.</p>
           </div>
         </div>
@@ -129,7 +143,7 @@ const emailTemplates = {
             </div>
           </div>
           <div class="footer">
-            <p>© 2024 ShopEasy. All rights reserved.</p>
+            <p>© 2026 ShopEasy. All rights reserved.</p>
             <p>This is an automated email, please do not reply.</p>
           </div>
         </div>
@@ -174,7 +188,7 @@ const emailTemplates = {
             </div>
           </div>
           <div class="footer">
-            <p>© 2024 ShopEasy. All rights reserved.</p>
+            <p>© 2026 ShopEasy. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -240,7 +254,7 @@ const emailTemplates = {
             </div>
           </div>
           <div class="footer">
-            <p>© 2024 ShopEasy. All rights reserved.</p>
+            <p>© 2026 ShopEasy. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -249,27 +263,51 @@ const emailTemplates = {
   }),
 };
 
-// ==================== SEND EMAIL FUNCTION (WITH RETRY) ====================
+// ==================== SEND EMAIL FUNCTION ====================
 
 const sendEmail = async (to, template, ...args) => {
   try {
-    // ✅ Skip email in development if no credentials (log only)
-    if (
-      process.env.NODE_ENV === "development" &&
-      (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)
-    ) {
-      console.log("📧 [DEV MODE] Email would be sent to:", to);
-      console.log("📧 [DEV MODE] Template:", template);
-      console.log("📧 [DEV MODE] Args:", args);
-      return true;
+    console.log("📧 ========== EMAIL SERVICE ==========");
+    console.log("📧 Attempting to send email...");
+    console.log("📧 To:", to);
+    console.log("📧 Template:", template);
+    console.log("📧 Args:", args);
+
+    // ✅ Validate email credentials exist
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error("❌ EMAIL CREDENTIALS MISSING!");
+      console.error("📧 EMAIL_USER:", process.env.EMAIL_USER || "NOT SET");
+      console.error(
+        "📧 EMAIL_PASS:",
+        process.env.EMAIL_PASS ? "SET (hidden)" : "NOT SET",
+      );
+      console.error(
+        "📧 Please set EMAIL_USER and EMAIL_PASS in your .env file",
+      );
+
+      // ✅ In development, log OTP for testing even if email fails
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔑 ========== DEV MODE OTP ==========");
+        console.log("🔑 OTP for testing:", args[1] || args[0]);
+        console.log("🔑 ==================================");
+      }
+
+      return false;
     }
 
     // ✅ Validate template exists
     if (!emailTemplates[template]) {
-      throw new Error(`Email template "${template}" not found`);
+      console.error(`❌ Email template "${template}" not found`);
+      return false;
     }
 
     const transporter = getTransporter();
+
+    if (!transporter) {
+      console.error("❌ Failed to create email transporter");
+      return false;
+    }
+
     const { subject, html } = emailTemplates[template](...args);
 
     const mailOptions = {
@@ -279,41 +317,93 @@ const sendEmail = async (to, template, ...args) => {
       html,
     };
 
+    console.log("📧 Sending email with options:", {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+    });
+
     // ✅ Send email with retry logic
     let lastError;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
+        console.log(`📧 Send attempt ${attempt}/3...`);
         const info = await transporter.sendMail(mailOptions);
-        console.log(
-          `✅ Email sent successfully to ${to} (${subject}) - Message ID: ${info.messageId}`,
-        );
+        console.log(`✅ Email sent successfully!`);
+        console.log(`✅ Message ID: ${info.messageId}`);
+        console.log(`✅ Response: ${info.response}`);
         return true;
       } catch (error) {
         lastError = error;
-        console.error(
-          `❌ Email send attempt ${attempt} failed:`,
-          error.message,
-        );
+        console.error(`❌ Attempt ${attempt} failed:`, error.message);
 
-        // Wait before retry (exponential backoff)
         if (attempt < 3) {
+          console.log(`⏳ Waiting ${attempt} second(s) before retry...`);
           await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
         }
       }
     }
 
     // All retries failed
-    throw lastError;
+    console.error("❌ All email send attempts failed");
+    console.error("❌ Last error:", lastError.message);
+
+    // ✅ In development, log OTP for testing even if email fails
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔑 ========== DEV MODE OTP ==========");
+      console.log("🔑 OTP for testing:", args[1] || args[0]);
+      console.log("🔑 ==================================");
+    }
+
+    return false;
   } catch (error) {
-    console.error("❌ Email error (all retries failed):", error);
-    // ✅ DON'T throw - just log the error (emails are non-critical)
+    console.error("❌ Email error:", error.message);
+
+    // ✅ In development, log OTP for testing even if email fails
+    if (process.env.NODE_ENV === "development") {
+      console.log("🔑 ========== DEV MODE OTP ==========");
+      console.log("🔑 OTP for testing:", args[1] || args[0]);
+      console.log("🔑 ==================================");
+    }
+
     return false;
   }
 };
 
-// ==================== CLEANUP ON SHUTDOWN ====================
+// ==================== TEST EMAIL FUNCTION ====================
 
-// Close transporter pool on app shutdown
+const testEmailConnection = async () => {
+  console.log("📧 ========== TESTING EMAIL CONNECTION ==========");
+  console.log("📧 EMAIL_HOST:", process.env.EMAIL_HOST || "smtp.gmail.com");
+  console.log("📧 EMAIL_PORT:", process.env.EMAIL_PORT || 587);
+  console.log("📧 EMAIL_USER:", process.env.EMAIL_USER || "NOT SET");
+  console.log(
+    "📧 EMAIL_PASS:",
+    process.env.EMAIL_PASS ? "SET (hidden)" : "NOT SET",
+  );
+
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error("❌ Cannot test - credentials missing!");
+    return false;
+  }
+
+  const transporter = getTransporter();
+  if (!transporter) {
+    return false;
+  }
+
+  try {
+    await transporter.verify();
+    console.log("✅ Email connection verified successfully!");
+    return true;
+  } catch (error) {
+    console.error("❌ Email connection failed:", error.message);
+    return false;
+  }
+};
+
+// ==================== CLEANUP ====================
+
 process.on("SIGTERM", () => {
   if (transporter) {
     transporter.close();
@@ -321,4 +411,4 @@ process.on("SIGTERM", () => {
   }
 });
 
-module.exports = { sendEmail };
+module.exports = { sendEmail, testEmailConnection };

@@ -37,7 +37,7 @@ console.log(
 );
 console.log(
   "FRONTEND_URL:",
-  process.env.FRONTEND_URL || "❌ Missing (default: http://localhost:5173)",
+  process.env.FRONTEND_URL || "❌ Missing (default: http://localhost:5000)",
 );
 console.log(
   "JWT_SECRET:",
@@ -57,27 +57,43 @@ const app = express();
 // Connect to database
 connectDB();
 
+// ==================== CORS CONFIGURATION ====================
 const allowedOrigins = [
   "https://shopeasy-fashionstore.netlify.app",
-  "http://localhost:5173",
+  "http://localhost:5000",
   "http://localhost:3000",
+  "http://127.0.0.1:5000",
+  "http://127.0.0.1:3000",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, Postman, curl)
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
+      // Check if origin is in allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        // ⚠️ In development, just warn but allow
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            `⚠️  CORS Warning: Origin ${origin} not in whitelist, but allowing in dev mode`,
+          );
+          callback(null, true);
+        } else {
+          // ❌ In production, block
+          console.error(`❌ CORS Error: Origin ${origin} is not allowed`);
+          callback(new Error("Not allowed by CORS"));
+        }
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   }),
 );
-
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -175,7 +191,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(
-    `🌐 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:5173"}`,
+    `🌐 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:5000"}`,
   );
   console.log(
     `📧 Email service: ${process.env.EMAIL_USER ? `✅ ${process.env.EMAIL_USER}` : "❌ Not configured"}`,

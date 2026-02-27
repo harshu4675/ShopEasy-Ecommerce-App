@@ -124,8 +124,8 @@ const Navbar = () => {
           {user ? (
             <>
               <Link to="/wishlist" className="nav-icon-btn" title="Wishlist">
-                <span className="nav-icon">♡</span>
-                <span className="nav-icon-label">Wishlist</span>
+                <span className="nav-icon ">♡</span>
+                <span className="nav-icon-label ">Wishlist</span>
               </Link>
 
               <Link to="/cart" className="nav-icon-btn" title="Cart">
@@ -186,7 +186,7 @@ const Navbar = () => {
                           to="/wishlist"
                           onClick={() => setUserMenuOpen(false)}
                         >
-                          ♡ Wishlist
+                          ❤️ Wishlist
                         </Link>
                         <Link
                           to="/notifications"

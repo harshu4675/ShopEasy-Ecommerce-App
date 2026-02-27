@@ -18,14 +18,29 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem("accessToken");
     const savedUser = localStorage.getItem("user");
 
+    console.log("🔍 Checking Auth...");
+    console.log("Token exists:", !!token);
+    console.log("Saved user:", savedUser ? JSON.parse(savedUser) : null);
+
     if (token && savedUser) {
       try {
         // Verify token is still valid
         const response = await api.get("/auth/me");
-        setUser(response.data.user || response.data);
-        setIsAuthenticated(true);
+        console.log("✅ /auth/me response:", response.data);
+
+        // ✅ FIX: Access user correctly from nested structure
+        const userData =
+          response.data.data?.user || response.data.user || response.data.data;
+
+        if (userData) {
+          setUser(userData);
+          setIsAuthenticated(true);
+        } else {
+          console.error("❌ No user data in response:", response.data);
+          clearAuth();
+        }
       } catch (error) {
-        console.log("Token validation failed, trying refresh...");
+        console.log("❌ Token validation failed:", error.response?.data);
         // Try to refresh token
         try {
           const refreshResponse = await api.post("/auth/refresh-token");
@@ -34,21 +49,28 @@ export const AuthProvider = ({ children }) => {
               "accessToken",
               refreshResponse.data.data.accessToken,
             );
+            // Try getting user again
             const meResponse = await api.get("/auth/me");
-            setUser(meResponse.data.user || meResponse.data);
-            setIsAuthenticated(true);
+            const userData =
+              meResponse.data.data?.user ||
+              meResponse.data.user ||
+              meResponse.data.data;
+
+            if (userData) {
+              setUser(userData);
+              setIsAuthenticated(true);
+            } else {
+              clearAuth();
+            }
           }
         } catch (refreshError) {
-          console.log("Refresh failed, clearing auth...");
-          // Refresh failed - clear auth
+          console.log("❌ Refresh failed, clearing auth...");
           clearAuth();
         }
       }
     }
     setLoading(false);
   };
-
-  // Clear auth data
   const clearAuth = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");

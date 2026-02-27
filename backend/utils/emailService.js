@@ -1,19 +1,46 @@
 const nodemailer = require("nodemailer");
 
-// Create transporter
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || "smtp.gmail.com",
-    port: process.env.EMAIL_PORT || 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+// ==================== TRANSPORTER (WITH CONNECTION POOLING) ====================
+
+// Create a single reusable transporter instance (connection pooling)
+let transporter = null;
+
+const getTransporter = () => {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || "smtp.gmail.com",
+      port: process.env.EMAIL_PORT || 587,
+      secure: false, // true for 465, false for other ports
+      pool: true, // ✅ Enable connection pooling
+      maxConnections: 5, // ✅ Max concurrent connections
+      maxMessages: 100, // ✅ Max messages per connection
+      rateDelta: 1000, // ✅ 1 second between messages
+      rateLimit: 5, // ✅ Max 5 emails per second
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+      // ✅ Connection timeout settings
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 5000, // 5 seconds
+      socketTimeout: 20000, // 20 seconds
+    });
+
+    // ✅ Verify connection on startup (optional)
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error("❌ Email transporter error:", error);
+      } else {
+        console.log("✅ Email server is ready to send messages");
+      }
+    });
+  }
+
+  return transporter;
 };
 
-// Email templates
+// ==================== EMAIL TEMPLATES ====================
+
 const emailTemplates = {
   verificationOTP: (name, otp) => ({
     subject: "Verify Your Email - ShopEasy",
@@ -222,21 +249,27 @@ const emailTemplates = {
   }),
 };
 
-// Send email function
+// ==================== SEND EMAIL FUNCTION (WITH RETRY) ====================
+
 const sendEmail = async (to, template, ...args) => {
   try {
-    // Skip email in development if no credentials
+    // ✅ Skip email in development if no credentials (log only)
     if (
       process.env.NODE_ENV === "development" &&
       (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)
     ) {
-      console.log("📧 Email would be sent to:", to);
-      console.log("📧 Template:", template);
-      console.log("📧 Args:", args);
+      console.log("📧 [DEV MODE] Email would be sent to:", to);
+      console.log("📧 [DEV MODE] Template:", template);
+      console.log("📧 [DEV MODE] Args:", args);
       return true;
     }
 
-    const transporter = createTransporter();
+    // ✅ Validate template exists
+    if (!emailTemplates[template]) {
+      throw new Error(`Email template "${template}" not found`);
+    }
+
+    const transporter = getTransporter();
     const { subject, html } = emailTemplates[template](...args);
 
     const mailOptions = {
@@ -246,13 +279,46 @@ const sendEmail = async (to, template, ...args) => {
       html,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Email sent:", info.messageId);
-    return true;
+    // ✅ Send email with retry logic
+    let lastError;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log(
+          `✅ Email sent successfully to ${to} (${subject}) - Message ID: ${info.messageId}`,
+        );
+        return true;
+      } catch (error) {
+        lastError = error;
+        console.error(
+          `❌ Email send attempt ${attempt} failed:`,
+          error.message,
+        );
+
+        // Wait before retry (exponential backoff)
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+        }
+      }
+    }
+
+    // All retries failed
+    throw lastError;
   } catch (error) {
-    console.error("❌ Email error:", error);
-    throw new Error("Failed to send email");
+    console.error("❌ Email error (all retries failed):", error);
+    // ✅ DON'T throw - just log the error (emails are non-critical)
+    return false;
   }
 };
+
+// ==================== CLEANUP ON SHUTDOWN ====================
+
+// Close transporter pool on app shutdown
+process.on("SIGTERM", () => {
+  if (transporter) {
+    transporter.close();
+    console.log("📧 Email transporter closed");
+  }
+});
 
 module.exports = { sendEmail };

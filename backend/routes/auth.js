@@ -70,11 +70,10 @@ router.post("/register", async (req, res) => {
       const otp = user.generateEmailVerificationOTP();
       await user.save();
 
-      try {
-        await sendEmail(email, "verificationOTP", name, otp);
-      } catch (emailError) {
-        console.error("Email send error:", emailError);
-      }
+      // ✅ SEND EMAIL IN BACKGROUND - DON'T AWAIT
+      sendEmail(email, "verificationOTP", name, otp).catch((err) =>
+        console.error("Email send error:", err),
+      );
 
       return res.status(200).json({
         success: true,
@@ -95,15 +94,15 @@ router.post("/register", async (req, res) => {
     const otp = user.generateEmailVerificationOTP();
     await user.save();
 
-    try {
-      await sendEmail(email, "verificationOTP", name, otp);
-    } catch (emailError) {
-      console.error("Email send error:", emailError);
-    }
+    // ✅ SEND EMAIL IN BACKGROUND - DON'T AWAIT
+    sendEmail(email, "verificationOTP", name, otp).catch((err) =>
+      console.error("Email send error:", err),
+    );
 
+    // ✅ RESPOND IMMEDIATELY
     res.status(201).json({
       success: true,
-      message: "Registration successful. Please verify your email.",
+      message: "Registration successful. Please check your email for OTP.",
       data: { email, requiresVerification: true },
     });
   } catch (error) {
@@ -162,12 +161,10 @@ router.post("/verify-email", async (req, res) => {
 
     await user.save();
 
-    // Send welcome email
-    try {
-      await sendEmail(email, "welcomeEmail", user.name);
-    } catch (emailError) {
-      console.error("Welcome email error:", emailError);
-    }
+    // ✅ SEND WELCOME EMAIL IN BACKGROUND
+    sendEmail(email, "welcomeEmail", user.name).catch((err) =>
+      console.error("Welcome email error:", err),
+    );
 
     // Set cookie
     res.cookie("refreshToken", refreshToken, getCookieOptions());
@@ -229,20 +226,18 @@ router.post("/resend-otp", async (req, res) => {
       otp = user.generateEmailVerificationOTP();
       await user.save();
 
-      try {
-        await sendEmail(email, "verificationOTP", user.name, otp);
-      } catch (emailError) {
-        console.error("Email error:", emailError);
-      }
+      // ✅ SEND EMAIL IN BACKGROUND
+      sendEmail(email, "verificationOTP", user.name, otp).catch((err) =>
+        console.error("Email error:", err),
+      );
     } else if (type === "reset") {
       otp = user.generatePasswordResetOTP();
       await user.save();
 
-      try {
-        await sendEmail(email, "passwordResetOTP", user.name, otp);
-      } catch (emailError) {
-        console.error("Email error:", emailError);
-      }
+      // ✅ SEND EMAIL IN BACKGROUND
+      sendEmail(email, "passwordResetOTP", user.name, otp).catch((err) =>
+        console.error("Email error:", err),
+      );
     } else {
       return res.status(400).json({
         success: false,
@@ -328,11 +323,10 @@ router.post("/login", async (req, res) => {
       const otp = user.generateEmailVerificationOTP();
       await user.save();
 
-      try {
-        await sendEmail(email, "verificationOTP", user.name, otp);
-      } catch (emailError) {
-        console.error("Email error:", emailError);
-      }
+      // ✅ SEND EMAIL IN BACKGROUND
+      sendEmail(email, "verificationOTP", user.name, otp).catch((err) =>
+        console.error("Email error:", err),
+      );
 
       return res.status(403).json({
         success: false,
@@ -428,12 +422,10 @@ router.post("/forgot-password", async (req, res) => {
     const otp = user.generatePasswordResetOTP();
     await user.save();
 
-    // Send email
-    try {
-      await sendEmail(email, "passwordResetOTP", user.name, otp);
-    } catch (emailError) {
-      console.error("Email error:", emailError);
-    }
+    // ✅ SEND EMAIL IN BACKGROUND
+    sendEmail(email, "passwordResetOTP", user.name, otp).catch((err) =>
+      console.error("Email error:", err),
+    );
 
     res.status(200).json({
       success: true,
@@ -546,12 +538,10 @@ router.post("/reset-password", async (req, res) => {
     user.refreshTokens = [];
     await user.save();
 
-    // Send confirmation email
-    try {
-      await sendEmail(user.email, "passwordChanged", user.name);
-    } catch (emailError) {
-      console.error("Email error:", emailError);
-    }
+    // ✅ SEND EMAIL IN BACKGROUND
+    sendEmail(user.email, "passwordChanged", user.name).catch((err) =>
+      console.error("Email error:", err),
+    );
 
     res.status(200).json({
       success: true,
@@ -730,12 +720,10 @@ router.put("/change-password", auth, async (req, res) => {
     user.refreshTokens = [];
     await user.save();
 
-    // Send email notification
-    try {
-      await sendEmail(user.email, "passwordChanged", user.name);
-    } catch (emailError) {
-      console.error("Email error:", emailError);
-    }
+    // ✅ SEND EMAIL IN BACKGROUND
+    sendEmail(user.email, "passwordChanged", user.name).catch((err) =>
+      console.error("Email error:", err),
+    );
 
     // Clear cookie
     res.clearCookie("refreshToken");

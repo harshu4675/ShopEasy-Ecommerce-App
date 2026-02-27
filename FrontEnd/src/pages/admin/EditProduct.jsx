@@ -21,8 +21,6 @@ const EditProduct = () => {
     sizes: [],
     colors: [],
     tags: "",
-    isFeatured: false,
-    isNewArrival: false,
   });
   const [images, setImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
@@ -74,8 +72,6 @@ const EditProduct = () => {
         sizes: product.sizes || [],
         colors: product.colors || [],
         tags: product.tags?.join(", ") || "",
-        isFeatured: product.isFeatured,
-        isNewArrival: product.isNewArrival,
       });
       setExistingImages(product.images);
     } catch (error) {
@@ -406,28 +402,6 @@ const EditProduct = () => {
                 value={formData.tags}
                 onChange={handleChange}
               />
-            </div>
-
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="isFeatured"
-                  checked={formData.isFeatured}
-                  onChange={handleChange}
-                />
-                <span>Featured Product</span>
-              </label>
-
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="isNewArrival"
-                  checked={formData.isNewArrival}
-                  onChange={handleChange}
-                />
-                <span>New Arrival</span>
-              </label>
             </div>
           </div>
 

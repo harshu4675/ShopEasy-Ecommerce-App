@@ -19,8 +19,6 @@ const AddProduct = () => {
     sizes: [],
     colors: [],
     tags: "",
-    isFeatured: false,
-    isNewArrival: false,
   });
   const [images, setImages] = useState([]);
   const [colorInput, setColorInput] = useState({ name: "", code: "#000000" });
@@ -376,28 +374,6 @@ const AddProduct = () => {
                 onChange={handleChange}
                 placeholder="e.g., summer, casual, trending"
               />
-            </div>
-
-            <div className="checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="isFeatured"
-                  checked={formData.isFeatured}
-                  onChange={handleChange}
-                />
-                <span>Featured Product</span>
-              </label>
-
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="isNewArrival"
-                  checked={formData.isNewArrival}
-                  onChange={handleChange}
-                />
-                <span>New Arrival</span>
-              </label>
             </div>
           </div>
 

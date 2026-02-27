@@ -43,6 +43,8 @@ const getCookieOptions = (rememberMe = false) => ({
 
 // @desc    Register user & send OTP
 // @route   POST /api/auth/register
+// @desc    Register user & send OTP
+// @route   POST /api/auth/register
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
@@ -70,10 +72,21 @@ router.post("/register", async (req, res) => {
       const otp = user.generateEmailVerificationOTP();
       await user.save();
 
-      // ✅ SEND EMAIL IN BACKGROUND - DON'T AWAIT
-      sendEmail(email, "verificationOTP", name, otp).catch((err) =>
-        console.error("Email send error:", err),
-      );
+      console.log(`📧 Sending OTP to existing user: ${email}`);
+      console.log(`🔐 Generated OTP: ${otp}`); // Remove in production!
+
+      // ✅ SEND EMAIL WITH PROPER ERROR HANDLING
+      sendEmail(email, "verificationOTP", name, otp)
+        .then(() => {
+          console.log(`✅ OTP email sent successfully to ${email}`);
+        })
+        .catch((err) => {
+          console.error(
+            `❌ Failed to send OTP email to ${email}:`,
+            err.message,
+          );
+          console.error("Full error:", err);
+        });
 
       return res.status(200).json({
         success: true,
@@ -83,6 +96,7 @@ router.post("/register", async (req, res) => {
     }
 
     // Create new user
+    console.log(`👤 Creating new user: ${email}`);
     user = await User.create({
       name,
       email,
@@ -94,10 +108,18 @@ router.post("/register", async (req, res) => {
     const otp = user.generateEmailVerificationOTP();
     await user.save();
 
-    // ✅ SEND EMAIL IN BACKGROUND - DON'T AWAIT
-    sendEmail(email, "verificationOTP", name, otp).catch((err) =>
-      console.error("Email send error:", err),
-    );
+    console.log(`📧 Sending OTP to new user: ${email}`);
+    console.log(`🔐 Generated OTP: ${otp}`); // Remove in production!
+
+    // ✅ SEND EMAIL WITH PROPER ERROR HANDLING
+    sendEmail(email, "verificationOTP", name, otp)
+      .then(() => {
+        console.log(`✅ OTP email sent successfully to ${email}`);
+      })
+      .catch((err) => {
+        console.error(`❌ Failed to send OTP email to ${email}:`, err.message);
+        console.error("Full error:", err);
+      });
 
     // ✅ RESPOND IMMEDIATELY
     res.status(201).json({
@@ -113,7 +135,6 @@ router.post("/register", async (req, res) => {
     });
   }
 });
-
 // @desc    Verify email OTP
 // @route   POST /api/auth/verify-email
 router.post("/verify-email", async (req, res) => {

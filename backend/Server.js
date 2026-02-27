@@ -28,12 +28,24 @@ const app = express();
 // Connect to database
 connectDB();
 
-// Middleware
+const allowedOrigins = [
+  "https://shopeasy-fashionstore.netlify.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin:
-      process.env.FRONTEND_URL || "https://shopeasy-fashionstore.netlify.app",
-    credentials: true, // Important for cookies
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
   }),
 );
 app.use(express.json());

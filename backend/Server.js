@@ -31,7 +31,10 @@ connectDB();
 // Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://shopeasy-fashion.netlify.app",
+    origin:
+      process.env.FRONTEND_URL ||
+      "http://shopeasy-fashion.netlify.app" ||
+      "https://localhost3000",
     credentials: true, // Important for cookies
   }),
 );

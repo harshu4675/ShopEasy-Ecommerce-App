@@ -99,14 +99,7 @@ const productSchema = new mongoose.Schema({
     default: 0,
   },
   tags: [String],
-  isFeatured: {
-    type: Boolean,
-    default: false,
-  },
-  isNewArrival: {
-    type: Boolean,
-    default: false,
-  },
+
   createdAt: {
     type: Date,
     default: Date.now,

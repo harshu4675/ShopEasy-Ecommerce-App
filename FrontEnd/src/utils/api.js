@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // API Base URL
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+const API_URL = process.env.REACT_APP_API_URL || "/api";
 
 // Create axios instance
 export const api = axios.create({
@@ -139,8 +139,6 @@ export const productsAPI = {
   getByCategory: (category, params) =>
     api.get(`/products/category/${category}`, { params }),
   search: (query) => api.get(`/products/search?q=${query}`),
-  getFeatured: () => api.get("/products/featured"),
-  getNewArrivals: () => api.get("/products/new-arrivals"),
 };
 
 // Cart API

@@ -89,26 +89,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get featured products
-router.get("/featured", async (req, res) => {
-  try {
-    const products = await Product.find({ isFeatured: true }).limit(8);
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Get new arrivals
-router.get("/new-arrivals", async (req, res) => {
-  try {
-    const products = await Product.find({ isNewArrival: true }).limit(8);
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
 // Get single product
 router.get("/:id", async (req, res) => {
   try {
@@ -138,8 +118,6 @@ router.post("/", auth, admin, upload.array("images", 5), async (req, res) => {
       colors,
       stock,
       tags,
-      isFeatured,
-      isNewArrival,
     } = req.body;
 
     const images = req.files.map(
@@ -160,8 +138,6 @@ router.post("/", auth, admin, upload.array("images", 5), async (req, res) => {
       stock,
       images,
       tags: tags ? JSON.parse(tags) : [],
-      isFeatured: isFeatured === "true",
-      isNewArrival: isNewArrival === "true",
     });
 
     res.status(201).json(product);
@@ -189,19 +165,7 @@ router.put("/:id", auth, admin, upload.array("images", 5), async (req, res) => {
       "subCategory",
       "brand",
       "stock",
-      "isFeatured",
-      "isNewArrival",
     ];
-
-    updateFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        if (field === "isFeatured" || field === "isNewArrival") {
-          product[field] = req.body[field] === "true";
-        } else {
-          product[field] = req.body[field];
-        }
-      }
-    });
 
     if (req.body.sizes) product.sizes = JSON.parse(req.body.sizes);
     if (req.body.colors) product.colors = JSON.parse(req.body.colors);

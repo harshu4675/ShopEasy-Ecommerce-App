@@ -11,28 +11,7 @@ import showToast from "../utils/toast";
 
 const Home = () => {
   const { user } = useContext(AuthContext);
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [newArrivals, setNewArrivals] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      const [featuredRes, newRes] = await Promise.all([
-        api.get("/products/featured"),
-        api.get("/products/new-arrivals"),
-      ]);
-      setFeaturedProducts(featuredRes.data);
-      setNewArrivals(newRes.data);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const categories = [
     {
@@ -176,27 +155,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Products */}
-      <section className="products-section">
-        <div className="container">
-          <div className="section-header">
-            <h2>Featured Products</h2>
-            <Link to="/products" className="view-all">
-              View All →
-            </Link>
-          </div>
-          {loading ? (
-            <Loader />
-          ) : (
-            <div className="products-grid">
-              {featuredProducts.slice(0, 8).map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
       {/* Banner */}
       {/* Promo Banner */}
       <section className="promo-banner">
@@ -239,27 +197,6 @@ const Home = () => {
         {/* Decorative Elements */}
         <div className="banner-shape banner-shape-1"></div>
         <div className="banner-shape banner-shape-2"></div>
-      </section>
-
-      {/* New Arrivals */}
-      <section className="products-section new-arrivals">
-        <div className="container">
-          <div className="section-header">
-            <h2>New Arrivals</h2>
-            <Link to="/products?sort=newest" className="view-all">
-              View All →
-            </Link>
-          </div>
-          {loading ? (
-            <Loader />
-          ) : (
-            <div className="products-grid">
-              {newArrivals.slice(0, 4).map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </div>
-          )}
-        </div>
       </section>
 
       {/* {Newsletter } */}

@@ -1,57 +1,44 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../utils/api";
-import ProductCard from "../components/ProductCard";
-import Loader from "../components/Loader";
 import "../styles/Home.css";
 import WelcomeBanner from "../components/WelcomeBanner";
-import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
-import showToast from "../utils/toast";
+import { showToast } from "../utils/toast";
 
 const Home = () => {
   const { user } = useContext(AuthContext);
-  const [loading, setLoading] = useState(true);
 
   const categories = [
     {
       name: "Men's Clothing",
-
       image: "./Images/mensSection.png",
     },
     {
       name: "Women's Clothing",
-
       image: "./Images/womensSection.png",
     },
     {
       name: "Kids' Clothing",
-
       image: "./Images/kidsSection.png",
     },
     {
       name: "Perfumes",
-
       image: "./Images/perfumeSection.png",
     },
     {
       name: "Watches",
-
       image: "./Images/watchesSection.png",
     },
     {
       name: "Sunglasses",
-
       image: "./Images/sunglassesSection.png",
     },
     {
       name: "Bags & Wallets",
-
       image: "./Images/walletSection.png",
     },
     {
       name: "Jewelry",
-
       image: "./Images/JewSection.png",
     },
   ];
@@ -155,7 +142,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Banner */}
       {/* Promo Banner */}
       <section className="promo-banner">
         <div className="container">
@@ -199,7 +185,7 @@ const Home = () => {
         <div className="banner-shape banner-shape-2"></div>
       </section>
 
-      {/* {Newsletter } */}
+      {/* Newsletter */}
       <section className="newsletter-section">
         <div className="newsletter-bg">
           <div className="newsletter-shape newsletter-shape-1"></div>

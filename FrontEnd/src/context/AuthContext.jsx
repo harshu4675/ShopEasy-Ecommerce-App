@@ -8,13 +8,16 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Initialize auth state on app load
-  useEffect(() => {
-    checkAuth();
+  // Clear auth data - wrapped in useCallback
+  const clearAuth = useCallback(() => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    setUser(null);
+    setIsAuthenticated(false);
   }, []);
 
-  // Check authentication status
-  const checkAuth = async () => {
+  // Check authentication status - wrapped in useCallback
+  const checkAuth = useCallback(async () => {
     const token = localStorage.getItem("accessToken");
     const savedUser = localStorage.getItem("user");
 
@@ -70,13 +73,12 @@ export const AuthProvider = ({ children }) => {
       }
     }
     setLoading(false);
-  };
-  const clearAuth = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
-    setUser(null);
-    setIsAuthenticated(false);
-  };
+  }, [clearAuth]);
+
+  // Initialize auth state on app load
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   // Register - Step 1: Send OTP
   const register = async (name, email, password, phone) => {
@@ -182,7 +184,7 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  // Logout
+  // Logout - with clearAuth dependency
   const logout = useCallback(async () => {
     try {
       await api.post("/auth/logout");
@@ -191,7 +193,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       clearAuth();
     }
-  }, []);
+  }, [clearAuth]);
 
   // Update user in context (for external updates)
   const updateUser = (userData) => {

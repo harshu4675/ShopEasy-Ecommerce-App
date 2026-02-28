@@ -166,7 +166,21 @@ router.put("/:id", auth, admin, upload.array("images", 5), async (req, res) => {
       "brand",
       "stock",
     ];
-
+    updateFields.forEach((field) => {
+      if (req.body[field] !== undefined && req.body[field] !== "") {
+        // Convert numbers properly
+        if (
+          field === "price" ||
+          field === "originalPrice" ||
+          field === "discount" ||
+          field === "stock"
+        ) {
+          product[field] = parseInt(req.body[field], 10) || 0;
+        } else {
+          product[field] = req.body[field];
+        }
+      }
+    });
     if (req.body.sizes) product.sizes = JSON.parse(req.body.sizes);
     if (req.body.colors) product.colors = JSON.parse(req.body.colors);
     if (req.body.tags) product.tags = JSON.parse(req.body.tags);

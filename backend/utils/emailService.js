@@ -237,7 +237,7 @@ const emailTemplates = {
               </div>
               <div class="benefit-item">
                 <span class="benefit-icon">🚚</span>
-                <span class="benefit-text"><strong>Free delivery</strong> on orders above ₹999</span>
+                <span class="benefit-text"><strong>Free delivery</strong> on orders above ₹199</span>
               </div>
               <div class="benefit-item">
                 <span class="benefit-icon">🎟️</span>

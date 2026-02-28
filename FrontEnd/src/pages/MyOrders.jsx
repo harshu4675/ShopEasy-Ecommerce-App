@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Combined import
 import { api, formatPrice } from "../utils/api";
 import { showToast } from "../utils/toast";
 import Loader from "../components/Loader";
 import "../styles/MyOrders.css";
 
 const MyOrders = () => {
+  // ✅ useNavigate INSIDE the component
+  const navigate = useNavigate();
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
@@ -61,7 +64,40 @@ const MyOrders = () => {
       year: "numeric",
     });
   };
+  // Add this helper function inside MyOrders component (after getStatusColor function)
+  const canReturn = (order) => {
+    if (order.orderStatus !== "Delivered")
+      return { allowed: false, reason: "Order not delivered" };
 
+    const deliveryDate = new Date(order.deliveredAt || order.updatedAt);
+    const today = new Date();
+    const daysSinceDelivery = Math.floor(
+      (today - deliveryDate) / (1000 * 60 * 60 * 24),
+    );
+
+    if (daysSinceDelivery > 7) {
+      return {
+        allowed: false,
+        reason: `Return window expired (${daysSinceDelivery} days since delivery)`,
+      };
+    }
+
+    return {
+      allowed: true,
+      daysLeft: 7 - daysSinceDelivery,
+    };
+  };
+
+  const initiateReturn = (order) => {
+    const returnCheck = canReturn(order);
+
+    if (!returnCheck.allowed) {
+      showToast(returnCheck.reason, "error");
+      return;
+    }
+
+    navigate("/return-request", { state: { order } });
+  };
   if (loading) return <Loader fullScreen />;
 
   if (orders.length === 0) {
@@ -154,7 +190,6 @@ const MyOrders = () => {
                       </div>
                     ))}
                   </div>
-
                   <div className="order-meta">
                     <div className="shipping-address">
                       <h4>📍 Shipping Address</h4>
@@ -192,7 +227,6 @@ const MyOrders = () => {
                         </div>
                       )}
                   </div>
-
                   {order.deliveryUpdates &&
                     order.deliveryUpdates.length > 0 && (
                       <div className="delivery-timeline">
@@ -224,7 +258,6 @@ const MyOrders = () => {
                         </div>
                       </div>
                     )}
-
                   <div className="order-price-breakdown">
                     <div className="price-row">
                       <span>Subtotal</span>
@@ -249,19 +282,48 @@ const MyOrders = () => {
                       <span>{formatPrice(order.totalAmount)}</span>
                     </div>
                   </div>
-
-                  {["Placed", "Confirmed", "Processing"].includes(
-                    order.orderStatus,
-                  ) && (
-                    <div className="order-actions">
+                  {/* Order Actions */}
+                  <div className="order-actions">
+                    {/* Cancel Button - Only for pending orders */}
+                    {["Placed", "Confirmed", "Processing"].includes(
+                      order.orderStatus,
+                    ) && (
                       <button
                         onClick={() => cancelOrder(order._id)}
                         className="btn btn-danger"
                       >
                         Cancel Order
                       </button>
-                    </div>
-                  )}
+                    )}
+
+                    {order.orderStatus === "Delivered" &&
+                      order.paymentStatus !== "Refunded" &&
+                      (() => {
+                        const returnCheck = canReturn(order);
+                        return returnCheck.allowed ? (
+                          <div className="return-action">
+                            <button
+                              onClick={() => initiateReturn(order)}
+                              className="btn btn-warning"
+                            >
+                              Request Return
+                            </button>
+                            <span className="return-days-left">
+                              {returnCheck.daysLeft} days left to return
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="return-expired">
+                            <span className="btn btn-disabled" disabled>
+                              Return Window Closed
+                            </span>
+                            <span className="return-expired-msg">
+                              Returns allowed within 7 days of delivery only
+                            </span>
+                          </div>
+                        );
+                      })()}
+                  </div>
                 </div>
               )}
             </div>

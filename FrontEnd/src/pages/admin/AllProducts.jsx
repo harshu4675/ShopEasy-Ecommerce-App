@@ -52,7 +52,8 @@ const AllProducts = () => {
         <div className="page-header">
           <h1>All Products ({products.length})</h1>
           <Link to="/admin/add-product" className="btn btn-primary">
-            ➕ Add Product
+            <span className="btn-icon">➕</span>
+            <span className="btn-text">Add Product</span>
           </Link>
         </div>
 
@@ -72,38 +73,108 @@ const AllProducts = () => {
             <p>Try adjusting your search or add new products</p>
           </div>
         ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Image</th>
-                  <th>Product</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Rating</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((product) => (
-                  <tr key={product._id}>
-                    <td>
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="table-img"
-                      />
-                    </td>
-                    <td>
-                      <div className="product-info-cell">
-                        <p className="product-name">{product.name}</p>
-                        <p className="product-brand">{product.brand}</p>
-                      </div>
-                    </td>
-                    <td>{product.category}</td>
-                    <td>
-                      <div className="price-cell">
+          <>
+            {/* ==================== DESKTOP TABLE ==================== */}
+            <div className="table-container products-desktop-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Image</th>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Rating</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.map((product) => (
+                    <tr key={product._id}>
+                      <td>
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="table-img"
+                        />
+                      </td>
+                      <td>
+                        <div className="product-info-cell">
+                          <p className="product-name">{product.name}</p>
+                          <p className="product-brand">{product.brand}</p>
+                        </div>
+                      </td>
+                      <td>{product.category}</td>
+                      <td>
+                        <div className="price-cell">
+                          <span className="current-price">
+                            {formatPrice(product.price)}
+                          </span>
+                          {product.originalPrice > product.price && (
+                            <span className="original-price">
+                              {formatPrice(product.originalPrice)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className={`stock-badge ${
+                            product.stock === 0
+                              ? "out"
+                              : product.stock <= 10
+                                ? "low"
+                                : "in"
+                          }`}
+                        >
+                          {product.stock}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="rating-cell">
+                          ⭐ {product.rating?.toFixed(1) || "0.0"} (
+                          {product.numReviews || 0})
+                        </span>
+                      </td>
+                      <td>
+                        <div className="table-actions">
+                          <Link
+                            to={`/admin/edit-product/${product._id}`}
+                            className="btn btn-sm btn-secondary"
+                          >
+                            ✏️ Edit
+                          </Link>
+                          <button
+                            onClick={() => deleteProduct(product._id)}
+                            className="btn btn-sm btn-danger"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ==================== MOBILE CARDS ==================== */}
+            <div className="products-mobile-grid">
+              {filteredProducts.map((product) => (
+                <div className="product-mobile-card" key={product._id}>
+                  <div className="product-mobile-card-header">
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="product-mobile-img"
+                    />
+                    <div className="product-mobile-card-info">
+                      <h4 className="product-mobile-name">{product.name}</h4>
+                      <p className="product-mobile-brand">{product.brand}</p>
+                      <p className="product-mobile-category">
+                        {product.category}
+                      </p>
+                      <div className="product-mobile-price">
                         <span className="current-price">
                           {formatPrice(product.price)}
                         </span>
@@ -113,41 +184,63 @@ const AllProducts = () => {
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td>
+                    </div>
+                  </div>
+
+                  <div className="product-mobile-card-details">
+                    <div className="detail-item">
+                      <span className="detail-label">Stock:</span>
                       <span
-                        className={`stock-badge ${product.stock === 0 ? "out" : product.stock <= 10 ? "low" : "in"}`}
+                        className={`stock-badge ${
+                          product.stock === 0
+                            ? "out"
+                            : product.stock <= 10
+                              ? "low"
+                              : "in"
+                        }`}
                       >
                         {product.stock}
                       </span>
-                    </td>
-                    <td>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Rating:</span>
                       <span className="rating-cell">
-                        ⭐ {product.rating} ({product.numReviews})
+                        ⭐ {product.rating?.toFixed(1) || "0.0"} (
+                        {product.numReviews || 0})
                       </span>
-                    </td>
-                    <td>
-                      <div className="table-actions">
-                        <Link
-                          to={`/admin/edit-product/${product._id}`}
-                          className="btn btn-sm btn-secondary"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => deleteProduct(product._id)}
-                          className="btn btn-sm btn-danger"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+
+                  <div className="product-mobile-card-actions">
+                    <Link
+                      to={`/admin/edit-product/${product._id}`}
+                      className="btn btn-edit"
+                    >
+                      ✏️ Edit
+                    </Link>
+                    <button
+                      onClick={() => deleteProduct(product._id)}
+                      className="btn btn-delete"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
+
+        {/* Mobile Floating Add Button */}
+        <div className="admin-mobile-fab">
+          <Link
+            to="/admin/add-product"
+            className="btn btn-add"
+            title="Add Product"
+          >
+            ➕
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -5,51 +5,9 @@ const path = require("path");
 const connectDB = require("./config/db");
 const cookieParser = require("cookie-parser");
 
-// ⭐ Load environment variables FIRST - BEFORE any other requires
 dotenv.config();
 
-// 🔍 Debug: Check if ALL keys are loaded
-console.log("\n========== Environment Check ==========");
-console.log("NODE_ENV:", process.env.NODE_ENV || "development");
-console.log(
-  "RAZORPAY_KEY_ID:",
-  process.env.RAZORPAY_KEY_ID ? "✅ Loaded" : "❌ Missing",
-);
-console.log(
-  "RAZORPAY_KEY_SECRET:",
-  process.env.RAZORPAY_KEY_SECRET ? "✅ Loaded" : "❌ Missing",
-);
-console.log(
-  "EMAIL_HOST:",
-  process.env.EMAIL_HOST || "❌ Missing (default: smtp.gmail.com)",
-);
-console.log(
-  "EMAIL_PORT:",
-  process.env.EMAIL_PORT || "❌ Missing (default: 587)",
-);
-console.log(
-  "EMAIL_USER:",
-  process.env.EMAIL_USER ? `✅ ${process.env.EMAIL_USER}` : "❌ Missing",
-);
-console.log(
-  "EMAIL_PASS:",
-  process.env.EMAIL_PASS ? "✅ ***SET***" : "❌ Missing",
-);
-console.log(
-  "FRONTEND_URL:",
-  process.env.FRONTEND_URL || "❌ Missing (default: http://localhost:5000)",
-);
-console.log(
-  "JWT_SECRET:",
-  process.env.JWT_SECRET ? "✅ ***SET***" : "❌ Missing",
-);
-console.log(
-  "MONGODB_URI:",
-  process.env.MONGODB_URI ? "✅ ***CONNECTED***" : "❌ Missing",
-);
-console.log("========================================\n");
-
-// ⭐ NOW require routes (after dotenv is loaded)
+const returnRoutes = require("./routes/returnRoutes");
 const paymentRoutes = require("./routes/payment");
 
 const app = express();
@@ -100,7 +58,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
+app.use("/api/returns", returnRoutes);
 // ==================== ROUTES ====================
 
 // Auth Routes (use only one - the updated one with OTP)

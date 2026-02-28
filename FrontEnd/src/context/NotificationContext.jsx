@@ -1,4 +1,10 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from "react";
 import { api } from "../utils/api";
 import { AuthContext } from "./AuthContext";
 
@@ -9,6 +15,25 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Wrap in useCallback to prevent dependency issues
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await api.get("/notifications");
+      setNotifications(response.data);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  }, []);
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await api.get("/notifications/unread-count");
+      setUnreadCount(response.data.count);
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       fetchNotifications();
@@ -17,25 +42,7 @@ export const NotificationProvider = ({ children }) => {
       const interval = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(interval);
     }
-  }, [user]);
-
-  const fetchNotifications = async () => {
-    try {
-      const response = await api.get("/notifications");
-      setNotifications(response.data);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-    }
-  };
-
-  const fetchUnreadCount = async () => {
-    try {
-      const response = await api.get("/notifications/unread-count");
-      setUnreadCount(response.data.count);
-    } catch (error) {
-      console.error("Error fetching unread count:", error);
-    }
-  };
+  }, [user, fetchNotifications, fetchUnreadCount]);
 
   const markAsRead = async (id) => {
     try {

@@ -2,12 +2,16 @@ import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { NotificationContext } from "../context/NotificationContext";
+import { CartContext } from "../context/CartContext";
+import { WishlistContext } from "../context/WishlistContext";
 import Logo from "./Logo";
 import "../styles/Navbar.css";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const { unreadCount } = useContext(NotificationContext);
+  const { cartCount } = useContext(CartContext);
+  const { wishlistCount } = useContext(WishlistContext);
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -124,12 +128,22 @@ const Navbar = () => {
           {user ? (
             <>
               <Link to="/wishlist" className="nav-icon-btn" title="Wishlist">
-                <span className="nav-icon ">♡</span>
-                <span className="nav-icon-label ">Wishlist</span>
+                <span className="nav-icon">♡</span>
+                {wishlistCount > 0 && (
+                  <span className="cart-badge">
+                    {wishlistCount > 9 ? "9+" : wishlistCount}
+                  </span>
+                )}
+                <span className="nav-icon-label">Wishlist</span>
               </Link>
 
               <Link to="/cart" className="nav-icon-btn" title="Cart">
                 <span className="nav-icon">🛒</span>
+                {cartCount > 0 && (
+                  <span className="cart-badge">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
                 <span className="nav-icon-label">Cart</span>
               </Link>
 
@@ -331,12 +345,12 @@ const Navbar = () => {
                 </li>
                 <li>
                   <Link to="/wishlist" onClick={closeMenu}>
-                    ♡ Wishlist
+                    ♡ Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
                   </Link>
                 </li>
                 <li>
                   <Link to="/cart" onClick={closeMenu}>
-                    🛒 Cart
+                    🛒 Cart {cartCount > 0 && `(${cartCount})`}
                   </Link>
                 </li>
                 <li>

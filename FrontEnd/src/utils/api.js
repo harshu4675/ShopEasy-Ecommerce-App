@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // API Base URL - Fix for Vite
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 console.log("API URL:", API_URL);
 // Debug log
 console.log("🔧 API Configuration:", {
@@ -172,6 +172,17 @@ export const ordersAPI = {
   getById: (id) => api.get(`/orders/${id}`),
   cancel: (id) => api.put(`/orders/${id}/cancel`),
   track: (id) => api.get(`/orders/${id}/track`),
+};
+
+// Returns API
+export const returnsAPI = {
+  create: (data) => api.post("/returns", data),
+  getMyReturns: () => api.get("/returns/my-returns"),
+  getById: (id) => api.get(`/returns/${id}`),
+  cancel: (id) => api.delete(`/returns/${id}`),
+  // Admin
+  getAll: () => api.get("/returns/admin/all"),
+  updateStatus: (id, data) => api.put(`/returns/${id}/status`, data),
 };
 
 // Address API

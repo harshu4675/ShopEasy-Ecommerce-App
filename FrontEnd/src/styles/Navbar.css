@@ -170,7 +170,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 8px 12px;
+  padding: 0 12px 8px 12px;
   text-decoration: none;
   color: var(--gray-700);
   border-radius: var(--border-radius-sm);
@@ -767,7 +767,7 @@
   }
 
   .nav-icon-btn {
-    padding: 8px;
+    padding: 6px;
   }
 
   .nav-icon {
@@ -800,4 +800,39 @@
   .nav-icon-btn .nav-icon-label {
     display: none;
   }
+}
+/* ==================== CART & WISHLIST BADGES ==================== */
+
+.nav-icon-btn {
+  position: relative;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.2;
 }

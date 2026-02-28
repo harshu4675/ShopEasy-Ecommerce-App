@@ -1,4 +1,10 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from "react";
 import { api } from "../utils/api";
 import { AuthContext } from "./AuthContext";
 
@@ -8,7 +14,7 @@ export const CartProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
   const [cartCount, setCartCount] = useState(0);
 
-  const fetchCartCount = async () => {
+  const fetchCartCount = useCallback(async () => {
     if (!user) {
       setCartCount(0);
       return;
@@ -22,11 +28,11 @@ export const CartProvider = ({ children }) => {
       console.error("Error fetching cart count:", error);
       setCartCount(0);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchCartCount();
-  }, [user]);
+  }, [fetchCartCount]);
 
   const updateCartCount = (count) => {
     setCartCount(count);

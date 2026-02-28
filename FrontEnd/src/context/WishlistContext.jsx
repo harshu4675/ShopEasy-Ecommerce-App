@@ -1,4 +1,10 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+} from "react";
 import { api } from "../utils/api";
 import { AuthContext } from "./AuthContext";
 
@@ -8,7 +14,7 @@ export const WishlistProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
   const [wishlistCount, setWishlistCount] = useState(0);
 
-  const fetchWishlistCount = async () => {
+  const fetchWishlistCount = useCallback(async () => {
     if (!user) {
       setWishlistCount(0);
       return;
@@ -22,11 +28,11 @@ export const WishlistProvider = ({ children }) => {
       console.error("Error fetching wishlist count:", error);
       setWishlistCount(0);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchWishlistCount();
-  }, [user]);
+  }, [fetchWishlistCount]);
 
   const updateWishlistCount = (count) => {
     setWishlistCount(count);

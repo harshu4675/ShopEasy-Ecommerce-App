@@ -45,6 +45,7 @@ import AllUsers from "./pages/admin/AllUsers";
 import AllReviews from "./pages/admin/AllReviews";
 import ManageCoupons from "./pages/admin/ManageCoupons";
 import DeliveryManagement from "./pages/admin/DeliveryManagement";
+import RefundManagement from "./pages/admin/RefundManagement"; // ✅ ADD THIS
 
 // Styles
 import "./App.css";
@@ -127,6 +128,7 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+
                     {/* Admin Routes */}
                     <Route
                       path="/admin/dashboard"
@@ -197,6 +199,15 @@ function App() {
                       element={
                         <AdminRoute>
                           <DeliveryManagement />
+                        </AdminRoute>
+                      }
+                    />
+                    {/* ✅ ADD THIS ROUTE */}
+                    <Route
+                      path="/admin/refunds"
+                      element={
+                        <AdminRoute>
+                          <RefundManagement />
                         </AdminRoute>
                       }
                     />

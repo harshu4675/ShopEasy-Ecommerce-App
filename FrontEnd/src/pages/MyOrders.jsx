@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Combined import
+import { Link, useNavigate } from "react-router-dom";
 import { api, formatPrice } from "../utils/api";
 import { showToast } from "../utils/toast";
 import Loader from "../components/Loader";
+import RefundBankModal from "../components/RefundBankModal"; // ✅ NEW
 import "../styles/MyOrders.css";
 
 const MyOrders = () => {
-  // ✅ useNavigate INSIDE the component
   const navigate = useNavigate();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null); // ✅ NEW
+  const [showRefundModal, setShowRefundModal] = useState(false); // ✅ NEW
+  const [selectedOrderForRefund, setSelectedOrderForRefund] = useState(null); // ✅ NEW
 
   useEffect(() => {
     fetchOrders();
@@ -28,19 +31,54 @@ const MyOrders = () => {
     }
   };
 
+  // ✅ UPDATED: Cancel order with refund check
   const cancelOrder = async (orderId) => {
     if (!window.confirm("Are you sure you want to cancel this order?")) return;
 
+    setCancellingId(orderId);
     try {
-      await api.put(`/orders/${orderId}/cancel`);
-      showToast("Order cancelled successfully", "success");
+      const response = await api.put(`/orders/${orderId}/cancel`);
+
+      // ✅ Check if order was paid and needs bank details
+      if (response.data.requiresBankDetails) {
+        setSelectedOrderForRefund(response.data.order);
+        setShowRefundModal(true);
+        showToast(
+          "Order cancelled. Please submit bank details for refund.",
+          "info",
+        );
+      } else {
+        showToast("Order cancelled successfully", "success");
+      }
+
       fetchOrders();
     } catch (error) {
       showToast(
         error.response?.data?.message || "Error cancelling order",
         "error",
       );
+    } finally {
+      setCancellingId(null);
     }
+  };
+
+  // ✅ NEW: Handle refund success
+  const handleRefundSuccess = (updatedOrder) => {
+    setOrders(
+      orders.map((o) => (o._id === updatedOrder._id ? updatedOrder : o)),
+    );
+    setShowRefundModal(false);
+    setSelectedOrderForRefund(null);
+    fetchOrders(); // Refresh orders
+  };
+
+  // ✅ NEW: Check if order needs bank details for refund
+  const needsRefundDetails = (order) => {
+    return (
+      order.orderStatus === "Cancelled" &&
+      order.paymentStatus === "Paid" &&
+      !order.refundDetails?.bankDetails
+    );
   };
 
   const getStatusColor = (status) => {
@@ -57,6 +95,18 @@ const MyOrders = () => {
     return colors[status] || "status-placed";
   };
 
+  // ✅ NEW: Get payment status color
+  const getPaymentStatusColor = (status) => {
+    const colors = {
+      Pending: "payment-pending",
+      Paid: "payment-paid",
+      Failed: "payment-failed",
+      "Refund Requested": "payment-refund-requested",
+      Refunded: "payment-refunded",
+    };
+    return colors[status] || "payment-pending";
+  };
+
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString("en-IN", {
       day: "numeric",
@@ -64,7 +114,7 @@ const MyOrders = () => {
       year: "numeric",
     });
   };
-  // Add this helper function inside MyOrders component (after getStatusColor function)
+
   const canReturn = (order) => {
     if (order.orderStatus !== "Delivered")
       return { allowed: false, reason: "Order not delivered" };
@@ -98,6 +148,7 @@ const MyOrders = () => {
 
     navigate("/return-request", { state: { order } });
   };
+
   if (loading) return <Loader fullScreen />;
 
   if (orders.length === 0) {
@@ -168,6 +219,45 @@ const MyOrders = () => {
                 )}
               </div>
 
+              {/* ✅ NEW: Show refund status banner */}
+              {order.paymentStatus === "Refund Requested" && (
+                <div className="refund-banner refund-processing">
+                  ⏳ Refund of {formatPrice(order.totalAmount)} is being
+                  processed
+                </div>
+              )}
+              {order.paymentStatus === "Refunded" && (
+                <div className="refund-banner refund-completed">
+                  ✅ Refund of {formatPrice(order.totalAmount)} has been
+                  processed
+                  {order.refundDetails?.refundTransactionId && (
+                    <span className="refund-txn">
+                      | Txn ID: {order.refundDetails.refundTransactionId}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* ✅ NEW: Show "Submit Bank Details" button if needed */}
+              {needsRefundDetails(order) && (
+                <div className="refund-action-banner">
+                  <span>
+                    💰 Your order was paid. Submit bank details to receive
+                    refund.
+                  </span>
+                  <button
+                    className="btn btn-warning btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedOrderForRefund(order);
+                      setShowRefundModal(true);
+                    }}
+                  >
+                    Submit Bank Details
+                  </button>
+                </div>
+              )}
+
               {expandedOrder === order._id && (
                 <div className="order-details">
                   <div className="order-items-full">
@@ -190,6 +280,7 @@ const MyOrders = () => {
                       </div>
                     ))}
                   </div>
+
                   <div className="order-meta">
                     <div className="shipping-address">
                       <h4>📍 Shipping Address</h4>
@@ -209,13 +300,17 @@ const MyOrders = () => {
                       <p>
                         Status:{" "}
                         <span
-                          className={
-                            order.paymentStatus === "Paid" ? "paid" : "pending"
-                          }
+                          className={`payment-status ${getPaymentStatusColor(order.paymentStatus)}`}
                         >
                           {order.paymentStatus}
                         </span>
                       </p>
+                      {/* ✅ Show Razorpay Payment ID if exists */}
+                      {order.razorpayPaymentId && (
+                        <p className="razorpay-id">
+                          Payment ID: {order.razorpayPaymentId}
+                        </p>
+                      )}
                     </div>
 
                     {order.expectedDelivery &&
@@ -226,7 +321,32 @@ const MyOrders = () => {
                           <p>{formatDate(order.expectedDelivery)}</p>
                         </div>
                       )}
+
+                    {/* ✅ NEW: Show refund details if applicable */}
+                    {order.refundDetails?.bankDetails && (
+                      <div className="refund-details-section">
+                        <h4>🏦 Refund Details</h4>
+                        <p>
+                          Amount:{" "}
+                          {formatPrice(order.refundDetails.refundAmount)}
+                        </p>
+                        <p>Status: {order.paymentStatus}</p>
+                        {order.refundDetails.refundCompletedAt && (
+                          <p>
+                            Processed on:{" "}
+                            {formatDate(order.refundDetails.refundCompletedAt)}
+                          </p>
+                        )}
+                        {order.refundDetails.refundTransactionId && (
+                          <p>
+                            Transaction ID:{" "}
+                            {order.refundDetails.refundTransactionId}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
+
                   {order.deliveryUpdates &&
                     order.deliveryUpdates.length > 0 && (
                       <div className="delivery-timeline">
@@ -258,6 +378,7 @@ const MyOrders = () => {
                         </div>
                       </div>
                     )}
+
                   <div className="order-price-breakdown">
                     <div className="price-row">
                       <span>Subtotal</span>
@@ -282,6 +403,7 @@ const MyOrders = () => {
                       <span>{formatPrice(order.totalAmount)}</span>
                     </div>
                   </div>
+
                   {/* Order Actions */}
                   <div className="order-actions">
                     {/* Cancel Button - Only for pending orders */}
@@ -291,11 +413,28 @@ const MyOrders = () => {
                       <button
                         onClick={() => cancelOrder(order._id)}
                         className="btn btn-danger"
+                        disabled={cancellingId === order._id}
                       >
-                        Cancel Order
+                        {cancellingId === order._id
+                          ? "Cancelling..."
+                          : "Cancel Order"}
                       </button>
                     )}
 
+                    {/* ✅ NEW: Submit Bank Details Button */}
+                    {needsRefundDetails(order) && (
+                      <button
+                        onClick={() => {
+                          setSelectedOrderForRefund(order);
+                          setShowRefundModal(true);
+                        }}
+                        className="btn btn-warning"
+                      >
+                        🏦 Submit Bank Details for Refund
+                      </button>
+                    )}
+
+                    {/* Return Button */}
                     {order.orderStatus === "Delivered" &&
                       order.paymentStatus !== "Refunded" &&
                       (() => {
@@ -330,6 +469,18 @@ const MyOrders = () => {
           ))}
         </div>
       </div>
+
+      {/* ✅ NEW: Refund Bank Details Modal */}
+      {showRefundModal && selectedOrderForRefund && (
+        <RefundBankModal
+          order={selectedOrderForRefund}
+          onClose={() => {
+            setShowRefundModal(false);
+            setSelectedOrderForRefund(null);
+          }}
+          onSuccess={handleRefundSuccess}
+        />
+      )}
     </div>
   );
 };

@@ -222,7 +222,7 @@ const Register = () => {
 
                   <div className="form-group">
                     <label>
-                      Phone Number <span className="optional">(Optional)</span>
+                      Phone Number <span className="optional"></span>
                     </label>
                     <div className="input-icon">
                       <span className="icon">📱</span>
@@ -234,6 +234,7 @@ const Register = () => {
                         placeholder="10-digit number"
                         maxLength="10"
                         disabled={loading}
+                        required
                       />
                     </div>
                   </div>

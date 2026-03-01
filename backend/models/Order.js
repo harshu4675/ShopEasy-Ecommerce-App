@@ -28,6 +28,28 @@ const deliveryUpdateSchema = new mongoose.Schema({
   },
 });
 
+// ✅ NEW: Refund Bank Details Schema
+const refundBankDetailsSchema = new mongoose.Schema({
+  accountHolderName: {
+    type: String,
+    required: true,
+  },
+  accountNumber: {
+    type: String,
+    required: true,
+  },
+  ifscCode: {
+    type: String,
+    required: true,
+  },
+  bankName: String,
+  upiId: String,
+  submittedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const orderSchema = new mongoose.Schema(
   {
     orderId: {
@@ -53,17 +75,17 @@ const orderSchema = new mongoose.Schema(
       required: true,
       enum: ["COD", "Razorpay", "UPI", "Card"],
     },
-    razorpayPaymentId: {
-      type: String,
-    },
-    razorpayOrderId: {
-      type: String,
-    },
+
+    // ✅ Payment tracking fields
+    razorpayPaymentId: String,
+    razorpayOrderId: String,
+
     paymentStatus: {
       type: String,
-      enum: ["Pending", "Paid", "Failed", "Refunded"],
+      enum: ["Pending", "Paid", "Failed", "Refund Requested", "Refunded"],
       default: "Pending",
     },
+
     orderStatus: {
       type: String,
       enum: [
@@ -78,13 +100,22 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Placed",
     },
+
+    // ✅ NEW: Refund tracking
+    refundDetails: {
+      bankDetails: refundBankDetailsSchema,
+      refundAmount: Number,
+      refundInitiatedAt: Date,
+      refundCompletedAt: Date,
+      refundTransactionId: String,
+      refundNotes: String,
+    },
+
     deliveryUpdates: [deliveryUpdateSchema],
-    expectedDelivery: {
-      type: Date,
-    },
-    deliveredAt: {
-      type: Date,
-    },
+    expectedDelivery: Date,
+    deliveredAt: Date,
+    cancelledAt: Date, // ✅ NEW
+
     subtotal: {
       type: Number,
       required: true,
@@ -108,15 +139,9 @@ const orderSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // ✅ ADDED THIS - will auto-create createdAt and updatedAt
+    timestamps: true,
   },
 );
-
-// ✅ Remove this manual createdAt field since timestamps handles it
-// createdAt: {
-//   type: Date,
-//   default: Date.now,
-// },
 
 orderSchema.pre("save", async function (next) {
   if (!this.orderId) {

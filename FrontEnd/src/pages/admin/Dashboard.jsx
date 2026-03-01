@@ -100,6 +100,37 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* ✅ NEW: Refund Stats (Add this section) */}
+        {(stats.refundRequested > 0 || stats.refunded > 0) && (
+          <div className="refund-stats-grid">
+            <div className="refund-stat pending">
+              <span className="refund-stat-icon">💳</span>
+              <div>
+                <p className="refund-stat-value">
+                  {stats.refundRequested || 0}
+                </p>
+                <p className="refund-stat-label">Pending Refunds</p>
+              </div>
+            </div>
+            <div className="refund-stat completed">
+              <span className="refund-stat-icon">✅</span>
+              <div>
+                <p className="refund-stat-value">{stats.refunded || 0}</p>
+                <p className="refund-stat-label">Refunds Completed</p>
+              </div>
+            </div>
+            <div className="refund-stat amount">
+              <span className="refund-stat-icon">💰</span>
+              <div>
+                <p className="refund-stat-value">
+                  {formatPrice(stats.totalRefunded || 0)}
+                </p>
+                <p className="refund-stat-label">Total Refunded</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div className="quick-actions">
           <h2>Quick Actions</h2>
@@ -115,6 +146,13 @@ const Dashboard = () => {
             </Link>
             <Link to="/admin/delivery" className="action-btn">
               <span>🚚</span> Delivery Updates
+            </Link>
+            {/* ✅ ADD THIS BUTTON */}
+            <Link to="/admin/refunds" className="action-btn warning">
+              <span>💳</span> Refund Requests
+              {stats.refundRequested > 0 && (
+                <span className="badge">{stats.refundRequested}</span>
+              )}
             </Link>
             <Link to="/admin/coupons" className="action-btn">
               <span>🎟️</span> Manage Coupons

@@ -1,64 +1,65 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { api, formatPrice } from "../../utils/api";
 import { showToast } from "../../utils/toast";
 import Loader from "../../components/Loader";
+import "../../styles/AdminPages.css";
 
 const AllOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPayment, setFilterPayment] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
-  const fetchOrders = useCallback(async () => {
+  useEffect(() => {
+    fetchOrders();
+  }, [filterStatus, filterPayment, searchTerm]);
+
+  const fetchOrders = async () => {
     try {
-      // ✅ FIX: Correct endpoint
-      const response = await api.get("/orders/admin/all");
+      const params = new URLSearchParams();
+      if (filterStatus !== "all") params.append("status", filterStatus);
+      if (filterPayment !== "all")
+        params.append("paymentStatus", filterPayment);
+      if (searchTerm) params.append("search", searchTerm);
+
+      const response = await api.get(`/orders/admin/all?${params.toString()}`);
       setOrders(response.data);
     } catch (error) {
-      console.error("Fetch orders error:", error);
       showToast("Error fetching orders", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
-  const updateOrderStatus = async (orderId, orderStatus) => {
+  const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      // ✅ FIX: Correct endpoint
-      await api.put(`/orders/${orderId}/status`, { orderStatus });
-      showToast(`Order status updated to ${orderStatus}`, "success");
+      await api.put(`/orders/${orderId}/status`, { orderStatus: newStatus });
+      showToast("Order status updated successfully", "success");
       fetchOrders();
     } catch (error) {
-      console.error("Update order status error:", error);
-      showToast(
-        error.response?.data?.message || "Error updating order",
-        "error",
-      );
+      showToast("Error updating order status", "error");
     }
   };
 
-  const updatePaymentStatus = async (orderId, paymentStatus) => {
+  const updatePaymentStatus = async (orderId, newStatus) => {
     try {
-      // ✅ FIX: Correct endpoint (was using wrong one)
-      await api.put(`/orders/${orderId}/payment-status`, { paymentStatus });
-      showToast(`Payment status updated to ${paymentStatus}`, "success");
+      await api.put(`/orders/${orderId}/payment-status`, {
+        paymentStatus: newStatus,
+      });
+      showToast("Payment status updated successfully", "success");
       fetchOrders();
     } catch (error) {
-      console.error("Update payment status error:", error);
-      showToast(
-        error.response?.data?.message || "Error updating payment",
-        "error",
-      );
+      showToast("Error updating payment status", "error");
     }
   };
 
-  const filteredOrders = orders.filter((order) => {
-    if (filter === "all") return true;
-    return order.orderStatus.toLowerCase().replace(/\s+/g, "-") === filter;
-  });
+  const viewOrderDetails = (order) => {
+    setSelectedOrder(order);
+    setShowModal(true);
+  };
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString("en-IN", {
@@ -70,225 +71,168 @@ const AllOrders = () => {
     });
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      Placed: "#f59e0b",
-      Confirmed: "#3b82f6",
-      Processing: "#8b5cf6",
-      Shipped: "#06b6d4",
-      "Out for Delivery": "#10b981",
-      Delivered: "#22c55e",
-      Cancelled: "#ef4444",
-      Returned: "#f97316",
+  const getPaymentStatusBadge = (status) => {
+    const badges = {
+      Pending: "badge-warning",
+      Paid: "badge-success",
+      Failed: "badge-danger",
+      "Refund Requested": "badge-info",
+      Refunded: "badge-purple",
     };
-    return colors[status] || "#6b7280";
+    return badges[status] || "badge-secondary";
+  };
+
+  const getOrderStatusBadge = (status) => {
+    const badges = {
+      Placed: "badge-info",
+      Confirmed: "badge-primary",
+      Processing: "badge-warning",
+      Shipped: "badge-info",
+      "Out for Delivery": "badge-info",
+      Delivered: "badge-success",
+      Cancelled: "badge-danger",
+      Returned: "badge-danger",
+    };
+    return badges[status] || "badge-secondary";
   };
 
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="admin-dashboard">
+    <div className="admin-page">
       <div className="container">
         <div className="page-header">
-          <h1>All Orders ({orders.length})</h1>
+          <h1>All Orders</h1>
+          <p>{orders.length} total orders</p>
         </div>
 
-        <div className="filter-tabs">
-          {[
-            "all",
-            "placed",
-            "confirmed",
-            "processing",
-            "shipped",
-            "out-for-delivery",
-            "delivered",
-            "cancelled",
-            "Returned",
-          ].map((tab) => (
-            <button
-              key={tab}
-              className={`filter-tab ${filter === tab ? "active" : ""}`}
-              onClick={() => setFilter(tab)}
+        {/* Filters */}
+        <div className="filters-section">
+          <div className="filter-group">
+            <label>Order Status</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
             >
-              {tab
-                .split("-")
-                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(" ")}
-            </button>
-          ))}
+              <option value="all">All Statuses</option>
+              <option value="Placed">Placed</option>
+              <option value="Confirmed">Confirmed</option>
+              <option value="Processing">Processing</option>
+              <option value="Shipped">Shipped</option>
+              <option value="Out for Delivery">Out for Delivery</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="Returned">Returned</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Payment Status</label>
+            <select
+              value={filterPayment}
+              onChange={(e) => setFilterPayment(e.target.value)}
+            >
+              <option value="all">All Payments</option>
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+              <option value="Failed">Failed</option>
+              <option value="Refund Requested">Refund Requested</option>
+              <option value="Refunded">Refunded</option>
+            </select>
+          </div>
+
+          <div className="filter-group search-group">
+            <label>Search</label>
+            <input
+              type="text"
+              placeholder="Search by Order ID, Name, Phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
 
-        {filteredOrders.length === 0 ? (
-          <div className="empty-state">
-            <h3>No orders found</h3>
-            <p>No orders match the selected filter</p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop Table View */}
-            <div className="orders-desktop-table">
-              <div className="orders-admin-list">
-                {filteredOrders.map((order) => (
-                  <div key={order._id} className="order-admin-card">
-                    <div className="order-admin-header">
-                      <div className="order-basic-info">
-                        <h3>Order #{order.orderId || order._id.slice(-8)}</h3>
-                        <p className="order-date">
-                          {formatDate(order.createdAt)}
-                        </p>
-                        <span
-                          className="order-status-badge"
-                          style={{
-                            backgroundColor: getStatusColor(order.orderStatus),
-                          }}
-                        >
-                          {order.orderStatus}
-                        </span>
-                      </div>
-                      <div className="order-amount">
-                        <span className="amount">
-                          {formatPrice(order.totalAmount)}
-                        </span>
-                        <span
-                          className={`payment-badge ${order.paymentStatus.toLowerCase()}`}
-                        >
-                          {order.paymentStatus}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="order-customer">
-                      <p>
-                        <strong>👤 {order.user?.name || "N/A"}</strong>
-                      </p>
-                      <p>📧 {order.user?.email || "N/A"}</p>
-                      <p>📱 {order.shippingAddress?.phone || "N/A"}</p>
-                    </div>
-
-                    <div className="order-shipping">
-                      <p>
-                        <strong>📍 Shipping Address:</strong>
-                      </p>
-                      <p>{order.shippingAddress?.address}</p>
-                      <p>
-                        {order.shippingAddress?.city},{" "}
-                        {order.shippingAddress?.state} -{" "}
-                        {order.shippingAddress?.pincode}
-                      </p>
-                    </div>
-
-                    <div className="order-items-preview">
-                      {order.items.slice(0, 4).map((item, index) => (
-                        <div key={index} className="item-mini">
-                          <img src={item.image} alt={item.name} />
-                          <span className="item-qty-badge">
-                            {item.quantity}
-                          </span>
-                        </div>
-                      ))}
-                      {order.items.length > 4 && (
-                        <div className="item-mini more-items">
-                          +{order.items.length - 4}
+        {/* Orders Table */}
+        <div className="table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Payment Method</th>
+                <th>Payment Status</th>
+                <th>Order Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="no-data">
+                    No orders found
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order) => (
+                  <tr key={order._id}>
+                    <td>
+                      <strong>#{order.orderId}</strong>
+                      {/* ✅ Show Razorpay ID if exists */}
+                      {order.razorpayPaymentId && (
+                        <div className="razorpay-id-small">
+                          <small>
+                            💳 {order.razorpayPaymentId.slice(0, 15)}...
+                          </small>
                         </div>
                       )}
-                    </div>
-
-                    <div className="order-status-controls">
-                      <div className="status-control">
-                        <label>Order Status:</label>
-                        <select
-                          value={order.orderStatus}
-                          onChange={(e) =>
-                            updateOrderStatus(order._id, e.target.value)
-                          }
-                        >
-                          <option value="Placed">Placed</option>
-                          <option value="Confirmed">Confirmed</option>
-                          <option value="Processing">Processing</option>
-                          <option value="Shipped">Shipped</option>
-                          <option value="Out for Delivery">
-                            Out for Delivery
-                          </option>
-                          <option value="Delivered">Delivered</option>
-                          <option value="Cancelled">Cancelled</option>
-                          <option value="Returned">Returned</option>
-                        </select>
+                    </td>
+                    <td>
+                      <div className="customer-info">
+                        <strong>{order.user?.name || "N/A"}</strong>
+                        <small>{order.user?.email || "N/A"}</small>
+                        <small>{order.shippingAddress?.phone}</small>
                       </div>
-
-                      <div className="status-control">
-                        <label>Payment Status:</label>
-                        <select
-                          value={order.paymentStatus}
-                          onChange={(e) =>
-                            updatePaymentStatus(order._id, e.target.value)
-                          }
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Paid">Paid</option>
-                          <option value="Failed">Failed</option>
-                          <option value="Refunded">Refunded</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Mobile Cards View */}
-            <div className="orders-mobile-grid">
-              {filteredOrders.map((order) => (
-                <div key={order._id} className="order-mobile-card">
-                  <div className="order-mobile-header">
-                    <div className="order-mobile-id">
-                      <h4>#{order.orderId || order._id.slice(-8)}</h4>
-                      <span className="order-mobile-date">
-                        {formatDate(order.createdAt)}
+                    </td>
+                    <td>{formatDate(order.createdAt)}</td>
+                    <td>{order.items?.length || 0}</td>
+                    <td>
+                      <strong>{formatPrice(order.totalAmount)}</strong>
+                    </td>
+                    <td>
+                      <span className="payment-method-badge">
+                        {order.paymentMethod}
                       </span>
-                    </div>
-                    <span
-                      className="order-status-badge-mobile"
-                      style={{
-                        backgroundColor: getStatusColor(order.orderStatus),
-                      }}
-                    >
-                      {order.orderStatus}
-                    </span>
-                  </div>
-
-                  <div className="order-mobile-customer">
-                    <p>
-                      <strong>{order.user?.name || "N/A"}</strong>
-                    </p>
-                    <p>{order.shippingAddress?.phone}</p>
-                  </div>
-
-                  <div className="order-mobile-amount">
-                    <span className="amount">
-                      {formatPrice(order.totalAmount)}
-                    </span>
-                    <span
-                      className={`payment-badge ${order.paymentStatus.toLowerCase()}`}
-                    >
-                      {order.paymentStatus}
-                    </span>
-                  </div>
-
-                  <div className="order-mobile-items">
-                    {order.items.slice(0, 3).map((item, index) => (
-                      <img key={index} src={item.image} alt={item.name} />
-                    ))}
-                    {order.items.length > 3 && (
-                      <span className="more-items">
-                        +{order.items.length - 3}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="order-mobile-controls">
-                    <div className="control-group">
-                      <label>Order:</label>
+                    </td>
+                    <td>
                       <select
+                        className={`status-select ${getPaymentStatusBadge(order.paymentStatus)}`}
+                        value={order.paymentStatus}
+                        onChange={(e) =>
+                          updatePaymentStatus(order._id, e.target.value)
+                        }
+                        disabled={order.paymentStatus === "Refunded"}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Failed">Failed</option>
+                        <option value="Refund Requested">
+                          Refund Requested
+                        </option>
+                        <option value="Refunded">Refunded</option>
+                      </select>
+                      {/* ✅ Show refund indicator */}
+                      {order.paymentStatus === "Refund Requested" && (
+                        <div className="refund-indicator">
+                          <small>⚠️ Bank details submitted</small>
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <select
+                        className={`status-select ${getOrderStatusBadge(order.orderStatus)}`}
                         value={order.orderStatus}
                         onChange={(e) =>
                           updateOrderStatus(order._id, e.target.value)
@@ -305,29 +249,289 @@ const AllOrders = () => {
                         <option value="Cancelled">Cancelled</option>
                         <option value="Returned">Returned</option>
                       </select>
-                    </div>
-
-                    <div className="control-group">
-                      <label>Payment:</label>
-                      <select
-                        value={order.paymentStatus}
-                        onChange={(e) =>
-                          updatePaymentStatus(order._id, e.target.value)
-                        }
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => viewOrderDetails(order)}
                       >
-                        <option value="Pending">Pending</option>
-                        <option value="Paid">Paid</option>
-                        <option value="Failed">Failed</option>
-                        <option value="Refunded">Refunded</option>
-                      </select>
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Order Details Modal */}
+      {showModal && selectedOrder && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div
+            className="modal-content order-details-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2>Order Details - #{selectedOrder.orderId}</h2>
+              <button className="close-btn" onClick={() => setShowModal(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {/* Order Status Section */}
+              <div className="detail-section">
+                <h3>📦 Order Status</h3>
+                <div className="status-badges">
+                  <span
+                    className={`badge ${getOrderStatusBadge(selectedOrder.orderStatus)}`}
+                  >
+                    {selectedOrder.orderStatus}
+                  </span>
+                  <span
+                    className={`badge ${getPaymentStatusBadge(selectedOrder.paymentStatus)}`}
+                  >
+                    {selectedOrder.paymentStatus}
+                  </span>
+                </div>
+                <p>
+                  <strong>Payment Method:</strong> {selectedOrder.paymentMethod}
+                </p>
+                {selectedOrder.razorpayPaymentId && (
+                  <p>
+                    <strong>Razorpay Payment ID:</strong>{" "}
+                    {selectedOrder.razorpayPaymentId}
+                  </p>
+                )}
+                {selectedOrder.razorpayOrderId && (
+                  <p>
+                    <strong>Razorpay Order ID:</strong>{" "}
+                    {selectedOrder.razorpayOrderId}
+                  </p>
+                )}
+                <p>
+                  <strong>Order Date:</strong>{" "}
+                  {formatDate(selectedOrder.createdAt)}
+                </p>
+              </div>
+
+              {/* ✅ NEW: Refund Bank Details Section */}
+              {selectedOrder.refundDetails?.bankDetails && (
+                <div className="detail-section refund-bank-section">
+                  <h3>🏦 Refund Bank Details</h3>
+                  <div className="bank-details-grid">
+                    <div className="bank-detail">
+                      <span className="label">Account Holder Name:</span>
+                      <span className="value">
+                        {
+                          selectedOrder.refundDetails.bankDetails
+                            .accountHolderName
+                        }
+                      </span>
                     </div>
+                    <div className="bank-detail">
+                      <span className="label">Account Number:</span>
+                      <span className="value">
+                        {selectedOrder.refundDetails.bankDetails.accountNumber}
+                      </span>
+                    </div>
+                    <div className="bank-detail">
+                      <span className="label">IFSC Code:</span>
+                      <span className="value">
+                        {selectedOrder.refundDetails.bankDetails.ifscCode}
+                      </span>
+                    </div>
+                    {selectedOrder.refundDetails.bankDetails.bankName && (
+                      <div className="bank-detail">
+                        <span className="label">Bank Name:</span>
+                        <span className="value">
+                          {selectedOrder.refundDetails.bankDetails.bankName}
+                        </span>
+                      </div>
+                    )}
+                    {selectedOrder.refundDetails.bankDetails.upiId && (
+                      <div className="bank-detail">
+                        <span className="label">UPI ID:</span>
+                        <span className="value">
+                          {selectedOrder.refundDetails.bankDetails.upiId}
+                        </span>
+                      </div>
+                    )}
+                    <div className="bank-detail">
+                      <span className="label">Refund Amount:</span>
+                      <span className="value refund-amount">
+                        {formatPrice(selectedOrder.refundDetails.refundAmount)}
+                      </span>
+                    </div>
+                    <div className="bank-detail">
+                      <span className="label">Requested On:</span>
+                      <span className="value">
+                        {formatDate(
+                          selectedOrder.refundDetails.refundInitiatedAt,
+                        )}
+                      </span>
+                    </div>
+                    {selectedOrder.refundDetails.refundCompletedAt && (
+                      <div className="bank-detail">
+                        <span className="label">Refund Completed:</span>
+                        <span className="value">
+                          {formatDate(
+                            selectedOrder.refundDetails.refundCompletedAt,
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {selectedOrder.refundDetails.refundTransactionId && (
+                      <div className="bank-detail">
+                        <span className="label">Transaction ID:</span>
+                        <span className="value">
+                          {selectedOrder.refundDetails.refundTransactionId}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ✅ Quick action to process refund */}
+                  {selectedOrder.paymentStatus === "Refund Requested" && (
+                    <div className="refund-action">
+                      <button
+                        className="btn btn-success"
+                        onClick={() => {
+                          window.location.href = `/admin/refunds`;
+                        }}
+                      >
+                        Go to Refund Management
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Customer Details */}
+              <div className="detail-section">
+                <h3>👤 Customer Details</h3>
+                <p>
+                  <strong>Name:</strong> {selectedOrder.user?.name || "N/A"}
+                </p>
+                <p>
+                  <strong>Email:</strong> {selectedOrder.user?.email || "N/A"}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {selectedOrder.user?.phone || "N/A"}
+                </p>
+              </div>
+
+              {/* Shipping Address */}
+              <div className="detail-section">
+                <h3>📍 Shipping Address</h3>
+                <p>{selectedOrder.shippingAddress.fullName}</p>
+                <p>{selectedOrder.shippingAddress.address}</p>
+                <p>
+                  {selectedOrder.shippingAddress.city},{" "}
+                  {selectedOrder.shippingAddress.state} -{" "}
+                  {selectedOrder.shippingAddress.pincode}
+                </p>
+                <p>Phone: {selectedOrder.shippingAddress.phone}</p>
+              </div>
+
+              {/* Order Items */}
+              <div className="detail-section">
+                <h3>📦 Order Items</h3>
+                <div className="order-items">
+                  {selectedOrder.items.map((item, index) => (
+                    <div key={index} className="order-item">
+                      <img src={item.image} alt={item.name} />
+                      <div className="item-info">
+                        <p className="item-name">{item.name}</p>
+                        <p className="item-details">
+                          {item.size && `Size: ${item.size}`}
+                          {item.size && item.color && " | "}
+                          {item.color && `Color: ${item.color}`}
+                        </p>
+                        <p className="item-qty">Qty: {item.quantity}</p>
+                      </div>
+                      <p className="item-price">
+                        {formatPrice(item.price * item.quantity)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Breakdown */}
+              <div className="detail-section">
+                <h3>💰 Price Breakdown</h3>
+                <div className="price-breakdown">
+                  <div className="price-row">
+                    <span>Subtotal:</span>
+                    <span>{formatPrice(selectedOrder.subtotal)}</span>
+                  </div>
+                  {selectedOrder.discount > 0 && (
+                    <div className="price-row discount">
+                      <span>Discount:</span>
+                      <span>-{formatPrice(selectedOrder.discount)}</span>
+                    </div>
+                  )}
+                  <div className="price-row">
+                    <span>Delivery:</span>
+                    <span>
+                      {selectedOrder.deliveryCharge === 0
+                        ? "FREE"
+                        : formatPrice(selectedOrder.deliveryCharge)}
+                    </span>
+                  </div>
+                  <div className="price-row total">
+                    <span>Total:</span>
+                    <span>{formatPrice(selectedOrder.totalAmount)}</span>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Delivery Timeline */}
+              {selectedOrder.deliveryUpdates &&
+                selectedOrder.deliveryUpdates.length > 0 && (
+                  <div className="detail-section">
+                    <h3>🚚 Delivery Timeline</h3>
+                    <div className="timeline">
+                      {selectedOrder.deliveryUpdates.map((update, index) => (
+                        <div key={index} className="timeline-item">
+                          <div className="timeline-dot"></div>
+                          <div className="timeline-content">
+                            <p className="timeline-status">{update.status}</p>
+                            {update.description && (
+                              <p className="timeline-desc">
+                                {update.description}
+                              </p>
+                            )}
+                            {update.location && (
+                              <p className="timeline-location">
+                                📍 {update.location}
+                              </p>
+                            )}
+                            <p className="timeline-time">
+                              {formatDate(update.timestamp)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </div>
-          </>
-        )}
-      </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

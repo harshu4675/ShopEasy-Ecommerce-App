@@ -200,8 +200,11 @@ const Checkout = () => {
             });
 
             if (verifyResponse.data.success) {
-              // Create order after successful payment
-              await createOrder(response.razorpay_payment_id);
+              // ✅ Pass both payment ID and order ID
+              await createOrder(
+                response.razorpay_payment_id,
+                response.razorpay_order_id,
+              );
             } else {
               showToast("Payment verification failed", "error");
               setSubmitting(false);
@@ -232,7 +235,8 @@ const Checkout = () => {
   };
 
   // Create Order (After payment or for COD)
-  const createOrder = async (paymentId = null) => {
+  // Update this function in Checkout.jsx
+  const createOrder = async (paymentId = null, orderId = null) => {
     try {
       const orderData = {
         shippingAddress: {
@@ -244,7 +248,8 @@ const Checkout = () => {
           pincode: formData.pincode,
         },
         paymentMethod: formData.paymentMethod,
-        ...(paymentId && { razorpayPaymentId: paymentId }),
+        ...(paymentId && { razorpayPaymentId: paymentId }), // ✅ Add this
+        ...(orderId && { razorpayOrderId: orderId }), // ✅ Add this
       };
 
       await api.post("/orders", orderData);

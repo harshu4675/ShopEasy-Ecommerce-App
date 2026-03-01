@@ -379,3 +379,116 @@
     justify-content: center;
   }
 }
+/* ==================== REFUND STATS STYLES ==================== */
+
+.refund-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.refund-stat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.refund-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.refund-stat.pending {
+  border-left: 4px solid #ffc107;
+  background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+}
+
+.refund-stat.completed {
+  border-left: 4px solid #28a745;
+  background: linear-gradient(135deg, #e8f5e9 0%, #ffffff 100%);
+}
+
+.refund-stat.amount {
+  border-left: 4px solid #6f42c1;
+  background: linear-gradient(135deg, #f3e5f5 0%, #ffffff 100%);
+}
+
+.refund-stat-icon {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.refund-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  color: #333;
+}
+
+.refund-stat-label {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0.25rem 0 0 0;
+}
+
+/* ==================== ACTION BUTTON STYLES ==================== */
+
+.action-btn.warning {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  color: #212529;
+  position: relative;
+}
+
+.action-btn.warning:hover {
+  background: linear-gradient(135deg, #e0a800 0%, #c69500 100%);
+}
+
+.action-btn .badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc3545;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+  .refund-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .refund-stat {
+    padding: 1rem;
+  }
+
+  .refund-stat-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+  }
+
+  .refund-stat-value {
+    font-size: 1.5rem;
+  }
+}

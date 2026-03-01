@@ -15,6 +15,7 @@ const AllOrders = () => {
 
   useEffect(() => {
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterStatus, filterPayment, searchTerm]);
 
   const fetchOrders = async () => {

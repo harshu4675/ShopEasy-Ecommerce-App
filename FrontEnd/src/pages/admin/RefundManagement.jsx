@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { api, formatPrice } from "../../utils/api";
 import { showToast } from "../../utils/toast";
 import Loader from "../../components/Loader";
@@ -8,18 +8,15 @@ const RefundManagement = () => {
   const [refundRequests, setRefundRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
-  const [filter, setFilter] = useState("all"); // all, pending, completed
+  const [filter, setFilter] = useState("all");
   const [selectedRefund, setSelectedRefund] = useState(null);
   const [refundForm, setRefundForm] = useState({
     refundTransactionId: "",
     refundNotes: "",
   });
 
-  useEffect(() => {
-    fetchRefundRequests();
-  }, [filter]);
-
-  const fetchRefundRequests = async () => {
+  // ✅ Use useCallback to fix dependency warning
+  const fetchRefundRequests = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get(
@@ -31,7 +28,11 @@ const RefundManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    fetchRefundRequests();
+  }, [fetchRefundRequests]);
 
   const processRefund = async (orderId) => {
     if (
@@ -41,10 +42,7 @@ const RefundManagement = () => {
 
     setProcessingId(orderId);
     try {
-      const response = await api.put(
-        `/orders/${orderId}/process-refund`,
-        refundForm,
-      );
+      await api.put(`/orders/${orderId}/process-refund`, refundForm);
       showToast("Refund processed successfully! ✓", "success");
       setSelectedRefund(null);
       setRefundForm({ refundTransactionId: "", refundNotes: "" });
@@ -67,11 +65,6 @@ const RefundManagement = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const maskAccountNumber = (accNo) => {
-    if (!accNo || accNo.length < 4) return accNo;
-    return "XXXX" + accNo.slice(-4);
   };
 
   if (loading) return <Loader />;

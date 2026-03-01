@@ -200,6 +200,12 @@ const Cart = () => {
         <div className="cart-content">
           <div className="cart-items">
             {cart.items.map((item) => {
+              // ✅ ADD NULL CHECK HERE
+              if (!item.product) {
+                console.warn("Product not found for cart item:", item);
+                return null; // Skip this item
+              }
+
               const itemKey = `${item.product._id}-${item.size || ""}-${item.color || ""}`;
               const isRemoving = removingItem === itemKey;
 

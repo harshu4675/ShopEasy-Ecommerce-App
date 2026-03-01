@@ -5,6 +5,25 @@ const Product = require("../models/Product");
 const Coupon = require("../models/Coupon");
 const auth = require("../middleware/auth");
 
+// ✅ Helper function to clean cart (remove deleted products)
+const cleanCart = async (cart) => {
+  const validItems = [];
+
+  for (const item of cart.items) {
+    if (item.product) {
+      validItems.push(item);
+    }
+  }
+
+  // If some items were removed, update cart
+  if (validItems.length !== cart.items.length) {
+    cart.items = validItems;
+    await cart.save();
+  }
+
+  return cart;
+};
+
 // Get cart
 router.get("/", auth, async (req, res) => {
   try {
@@ -14,7 +33,11 @@ router.get("/", auth, async (req, res) => {
 
     if (!cart) {
       cart = await Cart.create({ user: req.user._id, items: [] });
+    } else {
+      // ✅ Clean cart - remove items with deleted products
+      cart = await cleanCart(cart);
     }
+
     res.json(cart);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -48,7 +71,11 @@ router.post("/add", auth, async (req, res) => {
     );
 
     if (existingItem) {
-      existingItem.quantity += quantity;
+      const newQuantity = existingItem.quantity + quantity;
+      if (product.stock < newQuantity) {
+        return res.status(400).json({ message: "Insufficient stock" });
+      }
+      existingItem.quantity = newQuantity;
     } else {
       cart.items.push({ product: productId, quantity, size, color });
     }
@@ -59,6 +86,10 @@ router.post("/add", auth, async (req, res) => {
     cart = await Cart.findOne({ user: req.user._id })
       .populate("items.product")
       .populate("appliedCoupon");
+
+    // ✅ Clean cart before sending response
+    cart = await cleanCart(cart);
+
     res.json(cart);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -87,8 +118,14 @@ router.put("/update", auth, async (req, res) => {
     }
 
     const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product no longer available" });
+    }
+
     if (product.stock < quantity) {
-      return res.status(400).json({ message: "Insufficient stock" });
+      return res.status(400).json({
+        message: `Only ${product.stock} items available in stock`,
+      });
     }
 
     item.quantity = quantity;
@@ -98,6 +135,10 @@ router.put("/update", auth, async (req, res) => {
     const updatedCart = await Cart.findOne({ user: req.user._id })
       .populate("items.product")
       .populate("appliedCoupon");
+
+    // ✅ Clean cart before sending response
+    await cleanCart(updatedCart);
+
     res.json(updatedCart);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -114,6 +155,8 @@ router.delete("/remove/:productId", auth, async (req, res) => {
       return res.status(404).json({ message: "Cart not found" });
     }
 
+    const initialLength = cart.items.length;
+
     cart.items = cart.items.filter(
       (item) =>
         !(
@@ -123,12 +166,20 @@ router.delete("/remove/:productId", auth, async (req, res) => {
         ),
     );
 
+    if (cart.items.length === initialLength) {
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
     cart.updatedAt = Date.now();
     await cart.save();
 
     const updatedCart = await Cart.findOne({ user: req.user._id })
       .populate("items.product")
       .populate("appliedCoupon");
+
+    // ✅ Clean cart before sending response
+    await cleanCart(updatedCart);
+
     res.json(updatedCart);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -156,6 +207,13 @@ router.post("/apply-coupon", auth, async (req, res) => {
     );
     if (!cart) {
       return res.status(404).json({ message: "Cart not found" });
+    }
+
+    // ✅ Clean cart first
+    await cleanCart(cart);
+
+    if (cart.items.length === 0) {
+      return res.status(400).json({ message: "Your cart is empty" });
     }
 
     const subtotal = cart.items.reduce(
@@ -192,9 +250,13 @@ router.delete("/remove-coupon", auth, async (req, res) => {
     cart.appliedCoupon = null;
     await cart.save();
 
-    const updatedCart = await Cart.findOne({ user: req.user._id }).populate(
-      "items.product",
-    );
+    const updatedCart = await Cart.findOne({ user: req.user._id })
+      .populate("items.product")
+      .populate("appliedCoupon");
+
+    // ✅ Clean cart before sending response
+    await cleanCart(updatedCart);
+
     res.json(updatedCart);
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,7 +1,6 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const path = require("path");
 const connectDB = require("./config/db");
 const cookieParser = require("cookie-parser");
 
@@ -56,8 +55,6 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
-// Static files
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/returns", returnRoutes);
 // ==================== ROUTES ====================
 

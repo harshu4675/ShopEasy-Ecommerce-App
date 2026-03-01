@@ -1,41 +1,47 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const path = require("path");
+const cloudinary = require("../config/cloudinary");
 const Product = require("../models/Product");
 const auth = require("../middleware/auth");
 const admin = require("../middleware/admin");
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/products/");
-  },
-  filename: function (req, file, cb) {
-    cb(
-      null,
-      Date.now() +
-        "-" +
-        Math.round(Math.random() * 1e9) +
-        path.extname(file.originalname),
-    );
-  },
-});
+// Configure multer to use memory storage instead of disk
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5000000 },
+  limits: { fileSize: 5000000 }, // 5MB limit
   fileFilter: function (req, file, cb) {
     const filetypes = /jpeg|jpg|png|webp/;
     const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(
-      path.extname(file.originalname).toLowerCase(),
-    );
-    if (mimetype && extname) {
+    if (mimetype) {
       return cb(null, true);
     }
     cb(new Error("Only image files are allowed"));
   },
 });
+
+// Helper function to upload to Cloudinary
+const uploadToCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "shopeasy/products",
+        resource_type: "auto",
+        transformation: [
+          { width: 1000, height: 1000, crop: "limit" },
+          { quality: "auto" },
+        ],
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result.secure_url);
+      },
+    );
+    uploadStream.end(fileBuffer);
+  });
+};
 
 // Get all products with filters
 router.get("/", async (req, res) => {
@@ -102,7 +108,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Create product (Admin)
+// Create product (Admin) - WITH CLOUDINARY
 router.post("/", auth, admin, upload.array("images", 5), async (req, res) => {
   try {
     const {
@@ -120,9 +126,14 @@ router.post("/", auth, admin, upload.array("images", 5), async (req, res) => {
       tags,
     } = req.body;
 
-    const images = req.files.map(
-      (file) => `/uploads/products/${file.filename}`,
-    );
+    // Upload images to Cloudinary
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      const uploadPromises = req.files.map((file) =>
+        uploadToCloudinary(file.buffer),
+      );
+      imageUrls = await Promise.all(uploadPromises);
+    }
 
     const product = await Product.create({
       name,
@@ -136,17 +147,18 @@ router.post("/", auth, admin, upload.array("images", 5), async (req, res) => {
       sizes: sizes ? JSON.parse(sizes) : [],
       colors: colors ? JSON.parse(colors) : [],
       stock,
-      images,
+      images: imageUrls,
       tags: tags ? JSON.parse(tags) : [],
     });
 
     res.status(201).json(product);
   } catch (error) {
+    console.error("Error creating product:", error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// Update product (Admin)
+// Update product (Admin) - WITH CLOUDINARY
 router.put("/:id", auth, admin, upload.array("images", 5), async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -166,9 +178,9 @@ router.put("/:id", auth, admin, upload.array("images", 5), async (req, res) => {
       "brand",
       "stock",
     ];
+
     updateFields.forEach((field) => {
       if (req.body[field] !== undefined && req.body[field] !== "") {
-        // Convert numbers properly
         if (
           field === "price" ||
           field === "originalPrice" ||
@@ -181,19 +193,24 @@ router.put("/:id", auth, admin, upload.array("images", 5), async (req, res) => {
         }
       }
     });
+
     if (req.body.sizes) product.sizes = JSON.parse(req.body.sizes);
     if (req.body.colors) product.colors = JSON.parse(req.body.colors);
     if (req.body.tags) product.tags = JSON.parse(req.body.tags);
 
+    // If new images are uploaded, upload to Cloudinary
     if (req.files && req.files.length > 0) {
-      product.images = req.files.map(
-        (file) => `/uploads/products/${file.filename}`,
+      const uploadPromises = req.files.map((file) =>
+        uploadToCloudinary(file.buffer),
       );
+      const imageUrls = await Promise.all(uploadPromises);
+      product.images = imageUrls;
     }
 
     await product.save();
     res.json(product);
   } catch (error) {
+    console.error("Error updating product:", error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -205,9 +222,23 @@ router.delete("/:id", auth, admin, async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    // Optional: Delete images from Cloudinary
+    if (product.images && product.images.length > 0) {
+      const deletePromises = product.images.map((imageUrl) => {
+        // Extract public_id from Cloudinary URL
+        const parts = imageUrl.split("/");
+        const filename = parts[parts.length - 1].split(".")[0];
+        const publicId = `shopeasy/products/${filename}`;
+        return cloudinary.uploader.destroy(publicId);
+      });
+      await Promise.all(deletePromises);
+    }
+
     await product.deleteOne();
     res.json({ message: "Product deleted successfully" });
   } catch (error) {
+    console.error("Error deleting product:", error);
     res.status(500).json({ message: error.message });
   }
 });
